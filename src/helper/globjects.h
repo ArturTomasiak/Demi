@@ -5,7 +5,7 @@
 // shader //
 ////////////
 
-void shader_init(Shader* restrict shader, const char* vertex_shader_path, const char* fragment_shader_path, int32_t arr_limit, _Bool gl46);
+void shader_init(Shader* restrict shader, const char* const vertex_shader_path, const char* const fragment_shader_path, uint8_t texture_count, int32_t arr_limit, _Bool gl46);
 void shader_destruct(Shader* restrict shader);
 void shader_bind(const Shader* restrict shader);
 void shader_unbind();

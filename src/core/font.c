@@ -3,31 +3,44 @@
 void font_init(DemiFont* restrict font, int32_t uniform_limit, float dpi_scale, _Bool gl46) {
     int32_t texture_arr_limit;
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &texture_arr_limit);
-    font->line_spacing = 1.2;
+    font->line_spacing = 1.3;
 
-    if (texture_arr_limit < 512) {
-        fatal_error(u"gpu currently unsupported\n GL_MAX_ARRAY_TEXTURE_LAYERS < 512");
+    if (texture_arr_limit < 256) {
+        fatal_error(u"gpu currently unsupported\n GL_MAX_ARRAY_TEXTURE_LAYERS < 256");
         return;
     }
-    font->range[0][0] = 0;
-    font->range[0][1] = 383;
-    font->range[1][0] = 384;
-    font->range[1][1] = 591;
-    font->range[2][0] = 688;
-    font->range[2][1] = 1023;
-    font->range[3][0] = 1024;
-    font->range[3][1] = 1423;
-    font->range[4][0] = 3584;
-    font->range[4][1] = 3711;
-    font->range[5][0] = 4256;
-    font->range[5][1] = 4351;
-    font->range[6][0] = 7680;
-    font->range[6][1] = 7935;
-    font->range[7][0] = 8192;
-    font->range[7][1] = 8527;
-    font->range[8][0] = 8528;
-    font->range[8][1] = 8959;
-    font->texture_count = 9; // text_frag needs to be updated manually
+    else if (texture_arr_limit < 2000) {
+        font->range[0][0] = 0;
+        font->range[0][1] = 255;
+        font->range[1][0] = 256;
+        font->range[1][1] = 500;
+        font->range[2][0] = 501;
+        font->range[2][1] = 539;
+        font->range[3][0] = 900;
+        font->range[3][1] = 1150;
+        font->range[4][0] = 1151;
+        font->range[4][1] = 1300;
+        font->range[5][0] = 1301;
+        font->range[5][1] = 1418;
+        font->range[6][0] = 4300;
+        font->range[6][1] = 4351;
+        font->range[7][0] = 8194;
+        font->range[7][1] = 8300;
+        font->range[7][0] = 8301;
+        font->range[7][1] = 8487;
+        font->texture_count = 9;  // adjust DemiFont struct when changed
+    }
+    else {
+        font->range[0][0] = 0;
+        font->range[0][1] = 539;
+        font->range[1][0] = 900;
+        font->range[1][1] = 1418;
+        font->range[2][0] = 4300;
+        font->range[2][1] = 4351;
+        font->range[3][0] = 8194;
+        font->range[3][1] = 8487;
+        font->texture_count = 4;
+    }
 
     font->character = calloc(font->range[font->texture_count-1][1] + 1, sizeof(Character));
     if (!font->character) {
@@ -35,10 +48,8 @@ void font_init(DemiFont* restrict font, int32_t uniform_limit, float dpi_scale, 
         return;
     }
 
-    font->arr_limit = uniform_limit >> 4;   // because mat4 is 16 bytes
-    font->arr_limit = font->arr_limit >> 2; // TODO actually count the needed bytes
-    if (font->arr_limit < 10)               // arbitraty impossible scenario
-        font->arr_limit = 10;
+    font->arr_limit =  uniform_limit >> 4; // mat4 is 16 bytes
+    font->arr_limit -= 16;                 // text_vert's unifroms consist of one array one mat4
 
     font->transforms  = calloc(font->arr_limit * 16, sizeof(float));
     font->letter_map  = calloc(font->arr_limit, sizeof(int32_t));
@@ -48,12 +59,17 @@ void font_init(DemiFont* restrict font, int32_t uniform_limit, float dpi_scale, 
         fatal_error(u"FreeType initialization failed");
         return;
     }
-    if (FT_New_Face(font->ft_lib, "../resources/fonts/Hack-regular.ttf", 0, &font->ft_face)) {
-        fatal_error(u"failed to create face using resources/fonts/Hack-regular.ttf");
+    if (FT_New_Face(font->ft_lib, "../resources/fonts/Hack-Regular.ttf", 0, &font->ft_face)) {
+        fatal_error(u"failed to create face using /resources/fonts/Hack-Regular.ttf");
         return;
     }
+    if (FT_Select_Charmap(font->ft_face, FT_ENCODING_UNICODE)) {
+        #ifdef demidebug
+        printf("%s\n", "FT_Select_Charmap failed\n");
+        #endif
+    }
 
-    shader_init(&font->shader, "../resources/shaders/text_vert.glsl", "../resources/shaders/text_frag.glsl", font->arr_limit, gl46);
+    shader_init(&font->shader, "../resources/shaders/text_vert.glsl", "../resources/shaders/text_frag.glsl", font->texture_count, font->arr_limit, gl46);
 
     vao_init(&font->vao);
     const float vertex[8] = {
@@ -68,7 +84,12 @@ void font_init(DemiFont* restrict font, int32_t uniform_limit, float dpi_scale, 
     vao_add_buffer(&layout, &font->vao);
     vao_layout_destruct(&layout);
 
-    font_rebuild(font, 18, dpi_scale);
+    font_rebuild(font, 15, dpi_scale);
+
+    shader_uniform_float_3(&font->shader, "color[0]", 1.0f, 1.0f, 1.0f);
+    shader_uniform_float_3(&font->shader, "color[1]", gray[0], gray[1], gray[2]);         // comments
+    shader_uniform_float_3(&font->shader, "color[2]", orange[0], orange[1], orange[2]);   // variables
+    shader_uniform_float_3(&font->shader, "color[3]", violet[0], violet[1], violet[2]);   // keywords
 }
 
 void font_rebuild(DemiFont* restrict font, uint16_t new_font_size, float dpi_scale) {
@@ -80,7 +101,8 @@ void font_rebuild(DemiFont* restrict font, uint16_t new_font_size, float dpi_sca
     }
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    FT_Set_Pixel_Sizes(font->ft_face, font->size, font->size);
+    FT_Set_Pixel_Sizes(font->ft_face, font->size - 1, font->size - 1);
+    // -1 in set pixel sizes is the easiest workaround to glyphs exceeding font size not rendering properly
 
     FT_GlyphSlot glyph = font->ft_face->glyph;
 
@@ -114,9 +136,20 @@ void font_rebuild(DemiFont* restrict font, uint16_t new_font_size, float dpi_sca
 
         for (uint32_t c = font->range[i][0]; c <= font->range[i][1]; c++) {
             Character* ch = &font->character[c];
-            if (FT_Load_Char(font->ft_face, c, FT_LOAD_RENDER)) {
+            if (FT_Load_Char(font->ft_face, c, FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT)) {
                 #ifdef demidebug
-                printf("%s %c\n", "failed to load glyph", (char)c);
+                printf("%s %lc\n", "failed to load glyph", (char16_t)c);
+                #endif
+                ch->processed = 0;
+                continue;
+            }
+            else if (glyph->bitmap.width == 0 
+                || glyph->bitmap.rows == 0 
+                || glyph->bitmap.width > font->size 
+                || glyph->bitmap.rows > font->size) {
+                ch->processed = 0;
+                #ifdef demidebug
+                printf("%s %lc\n", "glyph's size is 0 or exceeds limit: ", (char16_t)c);
                 #endif
                 continue;
             }

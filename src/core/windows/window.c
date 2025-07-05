@@ -2,7 +2,6 @@
 
 #ifdef demiwindows
 
-#include <windows.h>
 #include <dwmapi.h>
 #include <glad/wgl.h>
 
@@ -25,20 +24,22 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
         break;
         case WM_DPICHANGED: {
             Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
-            editor->dpi = LOWORD(w_param);
+            DemiFont* font = (DemiFont*)GetWindowLongPtr(hwnd, sizeof(void*));
+            editor_dpi_change(editor, font, LOWORD(w_param));
             break;
         }
         case WM_SIZE: {
             Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
             if (w_param == SIZE_MINIMIZED)
-                editor->flags |= 0b100;
+                editor->flags |= 0b10;
             else {
-                editor->flags = (editor->flags & ~0b100) | 0b010;
+                editor->flags = editor->flags & ~0b10;
 
                 RECT client_rect;
                 GetClientRect(hwnd, &client_rect);
                 editor->width = client_rect.right - client_rect.left;
                 editor->height = client_rect.bottom - client_rect.top;
+                editor_resize(editor);
             }
             break;
         }
@@ -46,15 +47,23 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
             Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
             switch(LOWORD(w_param)) {
                 case 1001: // open file
-                    editor->flags |= 0b1000;
+                    file_open_explorer(editor);
                 break;
                 case 1002: // save file
-                    editor->flags |= 0b10000;
+
                 break;
-                case 1003: // settings
-                    editor->flags |= 0b100000;
+                case 1003: // save file as
+        
+                break;
+                case 1004: // settings
+                    editor->flags |= 0b100;
                 break;
             }
+            break;
+        }
+        case WM_MOUSEWHEEL: {
+            Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
+            editor_mouse_wheel(editor, (short)HIWORD(w_param));
             break;
         }
         case WM_CHAR: {
@@ -71,13 +80,13 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                 break;
                 default:
                     DemiFont* font = (DemiFont*)GetWindowLongPtr(hwnd, sizeof(void*));
-                    if (!iswcntrl(w_param) && is_printable(font, w_param))
+                    if (is_printable(font, w_param))
                         editor_input(editor, w_param);
                 break;
             }
             break;
         }
-        case WM_KEYDOWN:
+        case WM_KEYDOWN: {
             Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
             switch(w_param) {
                 case 'V':
@@ -98,7 +107,8 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                     }
                 break;
             }
-        break;
+            break;
+        }
     }
     return DefWindowProc(hwnd, msg, w_param, l_param);
 }
@@ -209,7 +219,7 @@ static inline HGLRC create_temp_context(HDC hdc, HWND hwnd) {
 }
 
 static inline HGLRC create_context(HDC hdc, HWND hwnd, _Bool* gl_version_fallback) {
-    const int attribList[] =
+    const int attrib_list[] =
     {
         WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
         WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
@@ -218,11 +228,13 @@ static inline HGLRC create_context(HDC hdc, HWND hwnd, _Bool* gl_version_fallbac
         WGL_COLOR_BITS_ARB, 32,
         WGL_DEPTH_BITS_ARB, 24,
         WGL_STENCIL_BITS_ARB, 8,
+        WGL_SAMPLE_BUFFERS_ARB, 1,
+        WGL_SAMPLES_ARB, 4,
         0,
     };
     int pixel_format;
     UINT num_format;
-    if (!wglChoosePixelFormatARB(hdc, attribList, NULL, 1, &pixel_format, &num_format))
+    if (!wglChoosePixelFormatARB(hdc, attrib_list, NULL, 1, &pixel_format, &num_format))
         goto fail;
     const int32_t attribs[] = {
         WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
@@ -267,8 +279,9 @@ static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwn
     HMENU file_menu = CreatePopupMenu();
     AppendMenuW(file_menu, MF_STRING, 1001, L"Open File");
     AppendMenuW(file_menu, MF_STRING, 1002, L"Save File");
+    AppendMenuW(file_menu, MF_STRING, 1003, L"Save File As");
     AppendMenuW(file_menu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(file_menu, MF_STRING, 1003, L"Settings");
+    AppendMenu(file_menu, MF_STRING, 1004, L"Settings");
     AppendMenuW(menu_bar, MF_POPUP, (UINT_PTR)file_menu, L"File");
  
     ZeroMemory(wc, sizeof *wc);
@@ -299,7 +312,7 @@ static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwn
         return 0;
     }
     COLORREF caption_color = RGB(255, 255, 255); 
-    COLORREF border_color  = RGB(203, 195, 227);
+    COLORREF border_color  = RGB(149, 106, 255);
     DwmSetWindowAttribute(*hwnd, DWMWA_CAPTION_COLOR, &caption_color, sizeof(caption_color));
     DwmSetWindowAttribute(*hwnd, DWMWA_BORDER_COLOR, &border_color, sizeof(border_color));
     DWM_WINDOW_CORNER_PREFERENCE preference = DWMWCP_DONOTROUND;

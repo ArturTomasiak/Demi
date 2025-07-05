@@ -19,8 +19,10 @@
 #define UNICODE
 #define _UNICODE
 #define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #elif defined(__linux__) || defined(__gnu_linux__)
 #define demilinux
+#include <pthread.h>
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -29,6 +31,16 @@
   #undef extern
   #define extern
 #endif
+
+//////////////////
+// declarations //
+//////////////////
+
+extern const float dark_gray[3];
+extern const float gray[3];
+extern const float orange[3];
+extern const float violet[3];
+extern const float light_violet[3];
 
 //////////////
 // typedefs //
@@ -88,9 +100,11 @@ typedef enum {
 
 typedef struct {
     char16_t* buffer;
+    int32_t*  color_map;
     uint64_t  length;
     uint64_t  allocated_memory;
     uint64_t  position;
+    uint64_t  color_map_change[2];
 } StringBuffer;
 
 typedef struct {
@@ -100,17 +114,38 @@ typedef struct {
     _Bool     file;
     _Bool     saved_progress;
 
+    float camera_x; 
+    float camera_y;
+
     StringBuffer string;
 } DemiFile;
 
 typedef struct {
-    float     dpi_scale;
-    uint8_t   flags; // flags description at the bottom of the file
-    uint8_t   files_opened;
-    uint8_t   current_file;
-    uint32_t  dpi;
-    int32_t   uniform_limit;
-    DemiFile* files;
+    Shader shader;
+    VAO vao[2];
+    VBO vbo[2];
+    Size size;
+    uint32_t rectangle_indices[6];
+} GUI;
+
+typedef struct {
+    char16_t* lines;
+    int32_t*  color_map;
+    uint64_t  lines_len;
+    uint64_t  last_line;
+} RenderData;
+
+typedef struct {
+    float      dpi_scale;
+    float      scroll_speed;
+    uint8_t    flags; // flags description at the bottom of the file
+    uint8_t    files_opened;
+    uint8_t    current_file;
+    uint32_t   dpi;
+    int32_t    uniform_limit;
+    DemiFile*  files;
+    RenderData data;
+    GUI        gui;
 
     int32_t width;
     int32_t height; 
@@ -130,8 +165,6 @@ typedef struct {
     Character* character;
 
     float line_spacing;
-    float camera_x; 
-    float camera_y;
     float* transforms;
     int32_t* texture_map;
     int32_t* letter_map;
@@ -165,8 +198,9 @@ void check_gl_errors();
 ///////////
 
 // flags & 0b1 -> 1 = opengl46, 0 = opengl33
-// flags & 0b10 -> 1 = resized window
-// flags & 0b100 -> 1 = minimized window
-// flags & 0b1000 -> 1 = open file
-// flags & 0b10000 -> 1 = save all files
-// flags & 0b100000 -> 1 = open settings
+// flags & 0b10 -> 1 = minimized window
+// flags & 0b100 -> 1 = open settings
+// flags & 0b1000 -> 1 = unused
+// flags & 0b10000 -> 1 = unused
+// flags & 0b100000 -> 1 = unused
+// flags & 0b1000000 -> 1 = unused

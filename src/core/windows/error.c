@@ -2,8 +2,6 @@
 
 #ifdef demiwindows
 
-#include <windows.h>
-
 void error(char16_t* err, char16_t* title) {
     MessageBox(NULL, err, title, MB_OK);
 }
@@ -14,8 +12,8 @@ void fatal_error(char16_t* msg) {
 }
 
 #ifdef demidebug
-static const DWORD orange = FOREGROUND_RED | FOREGROUND_GREEN;
-static const DWORD reset  = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+static const DWORD warning = FOREGROUND_RED | FOREGROUND_GREEN;
+static const DWORD reset   = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
 
 static char* translate_gl_error(GLenum error) {
     switch (error) {
@@ -42,7 +40,7 @@ void check_gl_errors() {
     GLenum error;
     HANDLE console_output = GetStdHandle(STD_OUTPUT_HANDLE);
     while ((error = glGetError())) {
-        SetConsoleTextAttribute(console_output, orange);
+        SetConsoleTextAttribute(console_output, warning);
         printf("[glGetError] ");
         SetConsoleTextAttribute(console_output, reset);
         printf("%s", translate_gl_error(error));

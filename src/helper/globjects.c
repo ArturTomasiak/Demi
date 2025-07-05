@@ -25,12 +25,12 @@ static uint32_t shader_compile(uint32_t type, const char* source) {
     return id;
 }
 
-static char* shader_read(const char* const location, int32_t arr_limit, _Bool gl46) {
+static char* shader_read(const char* const location, uint8_t texture_count, int32_t arr_limit, _Bool gl46) {
     char define_str[100];
     if (gl46)
-        sprintf(define_str, "#version 460 core\n#define arr_limit %d\n", arr_limit);
+        sprintf(define_str, "#version 460 core\n#define texture_count %d\n#define arr_limit %d\n", texture_count, arr_limit);
     else
-        sprintf(define_str, "#version 330 core\n#define arr_limit %d\n", arr_limit);
+        sprintf(define_str, "#version 330 core\n#define texture_count %d\n#define arr_limit %d\n", texture_count, arr_limit);
     uint32_t define_size = strlen(define_str);
     FILE* file_pointer = fopen(location, "rb");
     if (!file_pointer) {
@@ -61,9 +61,9 @@ static char* shader_read(const char* const location, int32_t arr_limit, _Bool gl
     return buffer;
 }
 
-void shader_init(Shader* restrict shader, const char* const vertex_shader_path, const char* const fragment_shader_path, int32_t arr_limit, _Bool gl46) {
-    char* vertex_shader   = shader_read(vertex_shader_path, arr_limit, gl46);
-    char* fragment_shader = shader_read(fragment_shader_path, arr_limit, gl46);
+void shader_init(Shader* restrict shader, const char* const vertex_shader_path, const char* const fragment_shader_path, uint8_t texture_count, int32_t arr_limit, _Bool gl46) {
+    char* vertex_shader   = shader_read(vertex_shader_path, texture_count, arr_limit, gl46);
+    char* fragment_shader = shader_read(fragment_shader_path, texture_count, arr_limit, gl46);
     shader->renderer_id = glCreateProgram();
     uint32_t vs = shader_compile(GL_VERTEX_SHADER, vertex_shader);
     uint32_t fs = shader_compile(GL_FRAGMENT_SHADER, fragment_shader);
