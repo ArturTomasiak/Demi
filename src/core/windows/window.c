@@ -5,6 +5,9 @@
 #include <dwmapi.h>
 #include <glad/wgl.h>
 
+// I am aware that win32's UNICODE mode expects wchar_t strings, 
+// it can be used interchangably with char16_t on windows
+
 typedef struct {
     HINSTANCE hinstance;
     WNDCLASSEX wc;
@@ -18,22 +21,27 @@ static inline HGLRC create_context(HDC hdc, HWND hwnd, _Bool* gl_version_fallbac
 static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwnd, const char16_t* app_name, int32_t width, int32_t height);
 
 LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) { 
+    Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
+    DemiFont* font = (DemiFont*)GetWindowLongPtr(hwnd, sizeof(void*));
     switch(msg) {
         case WM_CLOSE: 
             PostQuitMessage(0);
         break;
-        case WM_DPICHANGED: {
-            Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
-            DemiFont* font = (DemiFont*)GetWindowLongPtr(hwnd, sizeof(void*));
+        case WM_DPICHANGED:
             editor_dpi_change(editor, font, LOWORD(w_param));
-            break;
-        }
-        case WM_SIZE: {
-            Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
+        break;
+        case WM_ACTIVATE:
+            if (LOWORD(w_param) == WA_INACTIVE)
+                editor->flags |= 0b10;
+            else
+                editor->flags &= ~0b10;
+        break;
+        case WM_SIZE:
             if (w_param == SIZE_MINIMIZED)
                 editor->flags |= 0b10;
             else {
-                editor->flags = editor->flags & ~0b10;
+                editor->flags &= ~0b10;
+                editor->flags |= 0b10000;
 
                 RECT client_rect;
                 GetClientRect(hwnd, &client_rect);
@@ -41,33 +49,30 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                 editor->height = client_rect.bottom - client_rect.top;
                 editor_resize(editor);
             }
-            break;
-        }
-        case WM_COMMAND: {
-            Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
+        break;
+        case WM_COMMAND: 
             switch(LOWORD(w_param)) {
                 case 1001: // open file
                     file_open_explorer(editor);
                 break;
                 case 1002: // save file
-
+                    // TODO
                 break;
                 case 1003: // save file as
-        
+                    // TODO
                 break;
                 case 1004: // settings
                     editor->flags |= 0b100;
                 break;
             }
-            break;
-        }
-        case WM_MOUSEWHEEL: {
-            Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
+        break;
+        case WM_MOUSEWHEEL:
             editor_mouse_wheel(editor, (short)HIWORD(w_param));
-            break;
-        }
-        case WM_CHAR: {
-            Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
+        break;
+        case WM_LBUTTONUP:
+            editor_left_click(editor, font, (float)(short)LOWORD(l_param), (float)(short)HIWORD(l_param)); 
+        break;
+        case WM_CHAR:
             switch(w_param) {
                 case 8:
                     editor_backspace(editor);
@@ -79,15 +84,12 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                     editor_enter(editor);
                 break;
                 default:
-                    DemiFont* font = (DemiFont*)GetWindowLongPtr(hwnd, sizeof(void*));
                     if (is_printable(font, w_param))
                         editor_input(editor, w_param);
                 break;
             }
-            break;
-        }
-        case WM_KEYDOWN: {
-            Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
+        break;
+        case WM_KEYDOWN:
             switch(w_param) {
                 case 'V':
                     if (GetKeyState(VK_CONTROL) & 0x8000) {
@@ -106,9 +108,25 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                         }
                     }
                 break;
+                case 'S':
+                    if (GetKeyState(VK_CONTROL) & 0x8000) {
+                        // TODO
+                    }
+                break;
+                case VK_UP:
+                    editor_up(editor);
+                break;
+                case VK_LEFT:
+                    editor_left(editor);
+                break;
+                case VK_RIGHT:
+                    editor_right(editor);
+                break;
+                case VK_DOWN:
+                    editor_down(editor);
+                break;
             }
-            break;
-        }
+        break;
     }
     return DefWindowProc(hwnd, msg, w_param, l_param);
 }
@@ -318,6 +336,10 @@ static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwn
     DWM_WINDOW_CORNER_PREFERENCE preference = DWMWCP_DONOTROUND;
     DwmSetWindowAttribute(*hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
     return 1;
+}
+
+extern inline void platform_sleep(uint32_t millis) {
+    Sleep(millis);
 }
 
 #endif

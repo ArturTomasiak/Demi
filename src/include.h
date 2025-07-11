@@ -36,11 +36,13 @@
 // declarations //
 //////////////////
 
-extern const float dark_gray[3];
-extern const float gray[3];
-extern const float orange[3];
-extern const float violet[3];
 extern const float light_violet[3];
+extern const float violet[3];
+extern const float orange[3];
+extern const float gray[3];
+extern const float dark[3];
+extern uint8_t text_start_x;
+extern const uint8_t gui_margin_y;
 
 //////////////
 // typedefs //
@@ -133,6 +135,8 @@ typedef struct {
     int32_t*  color_map;
     uint64_t  lines_len;
     uint64_t  last_line;
+    uint64_t  current_line;
+    uint32_t  since_nl;
 } RenderData;
 
 typedef struct {
@@ -198,9 +202,9 @@ void check_gl_errors();
 ///////////
 
 // flags & 0b1 -> 1 = opengl46, 0 = opengl33
-// flags & 0b10 -> 1 = minimized window
+// flags & 0b10 -> 1 = minimized/not focused
 // flags & 0b100 -> 1 = open settings
-// flags & 0b1000 -> 1 = unused
-// flags & 0b10000 -> 1 = unused
-// flags & 0b100000 -> 1 = unused
+// flags & 0b1000 -> 1 = vsync off
+// flags & 0b10000 -> 1 = render_gui update
+// flags & 0b100000 -> 1 = adjust camera to cursor
 // flags & 0b1000000 -> 1 = unused

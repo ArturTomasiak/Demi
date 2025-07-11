@@ -1,8 +1,9 @@
 #include "gui.h"
 
-void gui_size(GUI* restrict gui, uint32_t width, uint32_t height, float dpi_scale) {
-    gui->size.x = width * dpi_scale;
-    gui->size.y = height * dpi_scale;
+void gui_size(Editor* restrict editor, uint16_t font_size) {
+    editor->gui.size.x = font_size << 3;
+    editor->gui.size.y = font_size << 1;
+    editor->flags |= 0b10000;
 }
 
 void gui_init(GUI* restrict gui, _Bool gl46) {

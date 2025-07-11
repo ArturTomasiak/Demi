@@ -1,6 +1,6 @@
 #include "font.h"
 
-void font_init(DemiFont* restrict font, int32_t uniform_limit, float dpi_scale, _Bool gl46) {
+void font_init(DemiFont* restrict font, int32_t uniform_limit, _Bool gl46) {
     int32_t texture_arr_limit;
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &texture_arr_limit);
     font->line_spacing = 1.3;
@@ -42,7 +42,7 @@ void font_init(DemiFont* restrict font, int32_t uniform_limit, float dpi_scale, 
         font->texture_count = 4;
     }
 
-    font->character = calloc(font->range[font->texture_count-1][1] + 1, sizeof(Character));
+    font->character = calloc(font->range[font->texture_count - 1][1] + 1, sizeof(Character));
     if (!font->character) {
         fatal_error(u"memory allocation failed");
         return;
@@ -70,6 +70,7 @@ void font_init(DemiFont* restrict font, int32_t uniform_limit, float dpi_scale, 
     }
 
     shader_init(&font->shader, "../resources/shaders/text_vert.glsl", "../resources/shaders/text_frag.glsl", font->texture_count, font->arr_limit, gl46);
+    shader_bind(&font->shader);
 
     vao_init(&font->vao);
     const float vertex[8] = {
@@ -84,15 +85,13 @@ void font_init(DemiFont* restrict font, int32_t uniform_limit, float dpi_scale, 
     vao_add_buffer(&layout, &font->vao);
     vao_layout_destruct(&layout);
 
-    font_rebuild(font, 15, dpi_scale);
-
     shader_uniform_float_3(&font->shader, "color[0]", 1.0f, 1.0f, 1.0f);
     shader_uniform_float_3(&font->shader, "color[1]", gray[0], gray[1], gray[2]);         // comments
     shader_uniform_float_3(&font->shader, "color[2]", orange[0], orange[1], orange[2]);   // variables
     shader_uniform_float_3(&font->shader, "color[3]", violet[0], violet[1], violet[2]);   // keywords
 }
 
-void font_rebuild(DemiFont* restrict font, uint16_t new_font_size, float dpi_scale) {
+void font_rebuild(DemiFont* restrict font, Editor* restrict editor, uint16_t new_font_size, float dpi_scale) {
     font->size = new_font_size * dpi_scale;
 
     if (font->texture[0]) {
@@ -170,6 +169,7 @@ void font_rebuild(DemiFont* restrict font, uint16_t new_font_size, float dpi_sca
             ch->processed = 1;
         }
     }
+    gui_size(editor, font->size);
 }
 
 void font_destruct(DemiFont* restrict font) {

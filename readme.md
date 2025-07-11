@@ -1,7 +1,7 @@
 # Demi
 A new (incomplete) GUI text edditor written in C.
 
-![screenshot](screenshot.png)
+![screenshot](ss.png)
 
 ## Table of Contents
 
@@ -18,8 +18,8 @@ A new (incomplete) GUI text edditor written in C.
 ## project structure
 
 ```bash
-include.h        # defines, includes, typedefs and error.c
-main.c           # main, main loop, multithreading
+include.h        # defines, declarations, includes, typedefs and error.c
+main.c           # declaration definition, main, main loop, multithreading
 core/
 ├── editor.c
 ├── editor.h

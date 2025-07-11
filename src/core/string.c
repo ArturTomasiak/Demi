@@ -114,12 +114,21 @@ char16_t* num_to_ustr(uint16_t num, uint16_t* result_len) {
 
 extern inline void setup_lines_rendering(Editor* restrict editor) {
     StringBuffer* current = &editor->files[editor->current_file].string;
+    uint32_t pos_since_nl = 0;
     uint64_t lines = 1;
     uint64_t alloc = 2;
-    for (int i = 0; i < current->length; i++) {
+    editor->data.current_line = 0;
+    editor->data.since_nl     = 0;
+    for (uint64_t i = 0; i <= current->length; i++) {
+        if (i == current->position) {
+            editor->data.current_line = lines;
+            editor->data.since_nl     = pos_since_nl;
+        }
+        pos_since_nl++;
         if (current->buffer[i] == u'\n') {
             lines++;
             alloc += num_count(lines) + 1;
+            pos_since_nl = 0;
         }
     }
     RenderData* data = &editor->data;
@@ -129,7 +138,7 @@ extern inline void setup_lines_rendering(Editor* restrict editor) {
         data->color_map[i] = 1;
     uint64_t index = 0;
     uint16_t temp_len;
-    for (int i = 0; i < lines; i++) {
+    for (uint64_t i = 0; i < lines; i++) {
         char16_t* temp = num_to_ustr(i + 1, &temp_len);
         memcpy(data->lines + index, temp, temp_len * sizeof(char16_t));
         index += temp_len;
@@ -137,4 +146,13 @@ extern inline void setup_lines_rendering(Editor* restrict editor) {
     }
     data->lines_len = alloc;
     data->last_line = lines;
+}
+
+_Bool is_printable(const DemiFont* restrict font, char16_t ch) {
+    if (ch == u' ')
+        return 1;
+    int16_t val = (int16_t)ch;
+    if (val < 20 || val > font->range[font->texture_count - 1][1] || !font->character[ch].processed)
+        return 0;
+    return 1;
 }

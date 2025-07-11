@@ -43,9 +43,12 @@ static void render_text_call(Shader* restrict shader, float* transforms, int32_t
     glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, length);
 }   
 
-void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_t len, float start_x, float start_y, float camera_y, int32_t scr_height, int32_t gui_height) {
+void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_t len, float start_x, float start_y, Editor* restrict editor) {
+    DemiFile* file;
+    if (editor)
+        file = &editor->files[editor->current_file];
     int32_t advance   = font->character['a'].advance; // safe with monospaced fonts
-    int32_t nl_height =  font->character[u'\n'].size.y * font->line_spacing;
+    float nl_height =  font->character[u'\n'].size.y * font->line_spacing;
     float translate[16] = {0}, scale_matrix[16] = {0};
     int32_t working_color_map[font->arr_limit];
     float x = start_x;
@@ -60,14 +63,14 @@ void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_
         }
         else if (buffer[i] == u' ')
             x += advance;
-        else if (!character->processed || ch_int > font->range[font->texture_count-1][1])
+        else if (!character->processed || ch_int > font->range[font->texture_count - 1][1])
             continue;
         else {
             float xpos = x + character->bearing.x;
             float ypos = y + character->bearing.y - font->size;
-            if (!gui_height)
+            if (!editor)
                 ;
-            else if (ypos + nl_height - camera_y + gui_height > scr_height || ypos < camera_y)
+            else if (ypos > file->camera_y + editor->height - (editor->gui.size.y + gui_margin_y) - nl_height || ypos < file->camera_y)
                 continue;
             memset(translate, 0.0f, 16 * sizeof(float));
             memset(scale_matrix, 0.0f, 16 * sizeof(float));
@@ -100,52 +103,66 @@ void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_
 
 void render_gui(Editor* restrict editor) {
     GUI* gui = &editor->gui;
-    float model[16] = {0}, mvp[16] = {0};
-    float rect_width = gui->size.x;
-    float rect_height = gui->size.y >> 4;
-    float rect_x = 0.0f;
-    float rect_y = editor->height - gui->size.y;
+    float current_x = 0;
+    static float rect_width = 0, rect_height = 0, close_size = 0, rect_y = 0, close_y = 0, text_ypos = 0;
+    if (editor->flags & 0b10000) {
+        rect_width  = gui->size.x;
+        rect_height = gui->size.y >> 4;
+        close_size = font->size;
+        rect_y = editor->height - gui->size.y;
+        close_y = editor->height - close_size - (gui->size.y >> 2);
+        text_ypos = editor->height - font->size - (font->size / 3);
+        editor->flags &= ~0b10000;
+    }
+    for (uint8_t i = 0; i < editor->files_opened; i++) {
+        float model[16] = {0}, mvp[16] = {0};
+        float rect_x = current_x;
+        
+        shader_bind(&gui->shader);
+        vao_bind(&gui->vao[0]);
+        
+        memset(model, 0, sizeof(model));
+        math_identity_f4x4(model, 1.0f);
+        math_translate_f4x4(model, rect_x, rect_y, 0.0f);
+        math_scale_f4x4(model, rect_width, rect_height, 1.0f);
     
-    shader_bind(&gui->shader);
-    vao_bind(&gui->vao[0]);
-    
-    memset(model, 0, sizeof(model));
-    math_identity_f4x4(model, 1.0f);
-    math_translate_f4x4(model, rect_x, rect_y, 0.0f);
-    math_scale_f4x4(model, rect_width, rect_height, 1.0f);
- 
-    math_multiply_f4x4(mvp, gui_projection, model);
-    
-    shader_uniform_mat4(&gui->shader, "mvp", mvp, 1);
-    shader_uniform_float_4(&gui->shader, "color", light_violet[0], light_violet[1], light_violet[2], 1.0f);
-    
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, gui->rectangle_indices);
-    
-    vao_bind(&gui->vao[1]);
-    
-    float close_size = gui->size.y >> 1;
-    float close_x = gui->size.x - close_size;
-    float close_y = editor->height - close_size - (gui->size.y >> 2);
-    
-    memset(model, 0, sizeof(model));
-    math_identity_f4x4(model, 1.0f);
-    math_translate_f4x4(model, close_x, close_y, 0.0f);
-    math_scale_f4x4(model, close_size, close_size, 1.0f);
-    
-    math_multiply_f4x4(mvp, gui_projection, model);
-    
-    shader_uniform_mat4(&gui->shader, "mvp", mvp, 1);
-    shader_uniform_float_4(&gui->shader, "color", 1.0f, 1.0f, 1.0f, 1.0f); 
-    
-    glLineWidth(2.0f * editor->dpi_scale);
-    glDrawArrays(GL_LINES, 0, 2);
-    glDrawArrays(GL_LINES, 2, 2);
+        math_multiply_f4x4(mvp, gui_projection, model);
+        
+        shader_uniform_mat4(&gui->shader, "mvp", mvp, 1);
+        if (i == editor->current_file) 
+            shader_uniform_float_4(&gui->shader, "color", light_violet[0], light_violet[1], light_violet[2], 1.0f);
+        else
+            shader_uniform_float_4(&gui->shader, "color", gray[0], gray[1], gray[2], 1.0f);
+        
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, gui->rectangle_indices);
+        
+        vao_bind(&gui->vao[1]);
+        
+        float close_x = current_x + gui->size.x - close_size;
+        
+        memset(model, 0, sizeof(model));
+        math_identity_f4x4(model, 1.0f);
+        math_translate_f4x4(model, close_x, close_y, 0.0f);
+        math_scale_f4x4(model, close_size, close_size, 1.0f);
+        
+        math_multiply_f4x4(mvp, gui_projection, model);
+        
+        shader_uniform_mat4(&gui->shader, "mvp", mvp, 1);
+        shader_uniform_float_4(&gui->shader, "color", 1.0f, 1.0f, 1.0f, 1.0f); 
+        
+        glLineWidth(2.0f * editor->dpi_scale);
+        glDrawArrays(GL_LINES, 0, 2);
+        glDrawArrays(GL_LINES, 2, 2);
 
-    char16_t* name    = editor->files[editor->current_file].file_name;
-    uint32_t name_len = u_strlen(name);
-    int32_t color_map[name_len];
-    memset(color_map, 0, name_len * sizeof(int32_t));
+        char16_t* name    = editor->files[i].file_name;
+        uint32_t name_len = u_strlen(name);
+        int32_t color_map[name_len];
+        memset(color_map, 0, name_len * sizeof(int32_t));
 
-    render_text_bind(1);
-    render_text(name, color_map, name_len, (gui->size.x >> 3), editor->height - font->size - (gui->size.y >> 3), 0, 0, 0);
+        float text_xpos = current_x + text_start_x;
+
+        render_text_bind(1);
+        render_text(name, color_map, name_len, text_xpos, text_ypos, 0);
+        current_x += gui->size.x;
+    }
 }
