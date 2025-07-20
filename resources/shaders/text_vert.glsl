@@ -7,6 +7,7 @@ out VS_OUT{
 
 uniform mat4 transforms[arr_limit];
 uniform mat4 projection;
+uniform int  current;
 
 void main() {
     gl_Position = projection * transforms[gl_InstanceID] * vec4(vertex.xy, 0.0, 1.0);

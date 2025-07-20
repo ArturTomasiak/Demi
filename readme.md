@@ -1,7 +1,7 @@
 # Demi
 A new (incomplete) GUI text edditor written in C.
 
-![screenshot](ss.png)
+![screenshot](scr.png)
 
 ## Table of Contents
 
@@ -19,7 +19,8 @@ A new (incomplete) GUI text edditor written in C.
 
 ```bash
 include.h        # defines, declarations, includes, typedefs and error.c
-main.c           # declaration definition, main, main loop, multithreading
+main.c           # declaration definitions, main, main loop, multithreaded helper func
+main_helper.c    # parts of prepare from main.c abstracted into functions for readability
 core/
 ├── editor.c
 ├── editor.h
@@ -27,20 +28,19 @@ core/
 ├── font.h
 ├── gui.c
 ├── gui.h
-├── platform_layer.h
 ├── render.c
 ├── render.h
 ├── string.c 
 ├── string.h     # StringBuffer, setting text color, char16_t functions and setting up printing lines
-├── windows/
-    ├── error.c  # message boxes and gl errors
-    ├── file.c   # file opening, saving etc.
-    ├── window.c # window creating and managing
-helper/
 ├── globjects.c
 ├── globjects.h  # shaders, vaos, vbos
 ├── math.c
 ├── math.h       # matrices
+├── platform_layer.h
+├── windows/
+    ├── error.c  # message boxes and gl errors
+    ├── file.c   # file opening, saving etc
+    ├── window.c # window creating and managing
 ```
 
 ## windows compilation 

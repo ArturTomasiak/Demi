@@ -92,7 +92,7 @@ void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_
             x += advance;
             working_index++;
             if (working_index == font->arr_limit) {
-                render_text_call(&font->shader, font->transforms, font->letter_map, color_map, font->texture_map, working_index);
+                render_text_call(&font->shader, font->transforms, font->letter_map, working_color_map, font->texture_map, working_index);
                 working_index = 0;
             }
         }
@@ -105,15 +105,17 @@ void render_gui(Editor* restrict editor) {
     GUI* gui = &editor->gui;
     float current_x = 0;
     static float rect_width = 0, rect_height = 0, close_size = 0, rect_y = 0, close_y = 0, text_ypos = 0;
-    if (editor->flags & 0b10000) {
+
+    if (editor->flags & FLAGS_RENGER_GUI_UPDATE) {
         rect_width  = gui->size.x;
         rect_height = gui->size.y >> 4;
         close_size = font->size;
         rect_y = editor->height - gui->size.y;
         close_y = editor->height - close_size - (gui->size.y >> 2);
         text_ypos = editor->height - font->size - (font->size / 3);
-        editor->flags &= ~0b10000;
+        editor->flags &= ~FLAGS_RENGER_GUI_UPDATE;
     }
+    
     for (uint8_t i = 0; i < editor->files_opened; i++) {
         float model[16] = {0}, mvp[16] = {0};
         float rect_x = current_x;

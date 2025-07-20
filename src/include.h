@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <uchar.h>
 
 #include <glad/gl.h>  
 #include <ft2build.h>
@@ -23,6 +22,12 @@
 #elif defined(__linux__) || defined(__gnu_linux__)
 #define demilinux
 #include <pthread.h>
+#endif
+
+#ifndef char16_t
+#if defined(demiwindows)
+#define char16_t wchar_t
+#endif
 #endif
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -93,6 +98,7 @@ typedef struct {
 
 typedef enum {
     UTF8,
+    UTF8BOM,
     UTF16BE,
     UTF16LE,
     UTF32BE,
@@ -106,7 +112,6 @@ typedef struct {
     uint64_t  length;
     uint64_t  allocated_memory;
     uint64_t  position;
-    uint64_t  color_map_change[2];
 } StringBuffer;
 
 typedef struct {
@@ -142,7 +147,7 @@ typedef struct {
 typedef struct {
     float      dpi_scale;
     float      scroll_speed;
-    uint8_t    flags; // flags description at the bottom of the file
+    uint8_t    flags; // flags defined at the bottom of the file
     uint8_t    files_opened;
     uint8_t    current_file;
     uint32_t   dpi;
@@ -184,6 +189,15 @@ typedef struct {
     FT_Face ft_face;
 } DemiFont;
 
+typedef struct {
+    char16_t** keyword;
+    uint16_t   keyword_len;
+    char16_t** variable;
+    uint16_t   variable_len;
+    char16_t** name;
+    uint32_t   name_len;
+} ColorMapData;
+
 #pragma pack(pop)
 
 /////////////
@@ -201,10 +215,10 @@ void check_gl_errors();
 // flags //
 ///////////
 
-// flags & 0b1 -> 1 = opengl46, 0 = opengl33
-// flags & 0b10 -> 1 = minimized/not focused
-// flags & 0b100 -> 1 = open settings
-// flags & 0b1000 -> 1 = vsync off
-// flags & 0b10000 -> 1 = render_gui update
-// flags & 0b100000 -> 1 = adjust camera to cursor
-// flags & 0b1000000 -> 1 = unused
+#define FLAGS_GL46                    0b1
+#define FLAGS_MINIMIZED               0b10
+#define FLAGS_VSYNC_OFF               0b100
+#define FLAGS_SETTINGS_OPEN           0b1000
+#define FLAGS_RENGER_GUI_UPDATE       0b10000
+#define FLAGS_ADJUST_CAMERA_TO_CURSOR 0b100000
+#define FLAGS_UNUSED                  0b1000000

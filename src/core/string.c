@@ -10,7 +10,7 @@ void buffer_init(StringBuffer* restrict string) {
 
 void buffer_init_str(StringBuffer* restrict string, uint64_t len, char16_t* str) {
     string->length = len;
-    string->allocated_memory = len;
+    string->allocated_memory = len + 1;
     string->buffer = realloc(string->buffer, sizeof(char16_t) * string->allocated_memory);
     string->color_map = realloc(string->color_map, sizeof(int32_t) * string->allocated_memory);
     if (!string->buffer || !string->color_map) {
@@ -18,7 +18,7 @@ void buffer_init_str(StringBuffer* restrict string, uint64_t len, char16_t* str)
         return;
     }
     memcpy(string->buffer, str, len * sizeof(char16_t));
-    buffer_update_color_map(string);
+    color_map_update(string);
 }
 
 void buffer_destruct(StringBuffer* restrict string) {
@@ -44,7 +44,11 @@ void buffer_add_char(StringBuffer* restrict string, char16_t ch) {
     string->buffer[string->position] = ch;
     string->buffer[string->length] = '\0';
     string->position++;
-    buffer_update_color_map(string);
+
+    if (ch == u'\n')
+        return;
+    
+    color_map_update(string);
 }
 
 void buffer_rem_char(StringBuffer* restrict string) {
@@ -54,7 +58,8 @@ void buffer_rem_char(StringBuffer* restrict string) {
     string->length--;
     string->position--;
     string->buffer[string->length] = '\0';
-    buffer_update_color_map(string);
+
+    color_map_update(string);
 } 
 
 void buffer_add_string(StringBuffer* restrict string, uint64_t len, char16_t* str) {
@@ -75,12 +80,8 @@ void buffer_add_string(StringBuffer* restrict string, uint64_t len, char16_t* st
         memcpy(string->buffer + string->position, str, len * sizeof(char16_t));
         string->buffer[string->length] = '\0';
         string->position += len;
+        color_map_update(string);
     }
-    buffer_update_color_map(string);
-}
-
-void buffer_update_color_map(StringBuffer* restrict string) {
-    memset(string->color_map, 0, string->length * sizeof(int32_t)); // placeholder
 }
 
 uint64_t u_strlen(const char16_t* str) {
@@ -110,42 +111,6 @@ char16_t* num_to_ustr(uint16_t num, uint16_t* result_len) {
     }
     str[len] = u'\n';
     return str;
-}
-
-extern inline void setup_lines_rendering(Editor* restrict editor) {
-    StringBuffer* current = &editor->files[editor->current_file].string;
-    uint32_t pos_since_nl = 0;
-    uint64_t lines = 1;
-    uint64_t alloc = 2;
-    editor->data.current_line = 0;
-    editor->data.since_nl     = 0;
-    for (uint64_t i = 0; i <= current->length; i++) {
-        if (i == current->position) {
-            editor->data.current_line = lines;
-            editor->data.since_nl     = pos_since_nl;
-        }
-        pos_since_nl++;
-        if (current->buffer[i] == u'\n') {
-            lines++;
-            alloc += num_count(lines) + 1;
-            pos_since_nl = 0;
-        }
-    }
-    RenderData* data = &editor->data;
-    data->lines     = realloc(data->lines, (alloc + 1) * sizeof(char16_t));
-    data->color_map = realloc(data->color_map, alloc * sizeof(int32_t));
-    for (uint64_t i = 0; i < alloc; i++)
-        data->color_map[i] = 1;
-    uint64_t index = 0;
-    uint16_t temp_len;
-    for (uint64_t i = 0; i < lines; i++) {
-        char16_t* temp = num_to_ustr(i + 1, &temp_len);
-        memcpy(data->lines + index, temp, temp_len * sizeof(char16_t));
-        index += temp_len;
-        free(temp);
-    }
-    data->lines_len = alloc;
-    data->last_line = lines;
 }
 
 _Bool is_printable(const DemiFont* restrict font, char16_t ch) {

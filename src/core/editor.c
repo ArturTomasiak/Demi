@@ -46,27 +46,27 @@ void editor_destruct(Editor* restrict editor) {
 
 void editor_backspace(Editor* restrict editor) {
     buffer_rem_char(&editor->files[editor->current_file].string);
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_tab(Editor* restrict editor) {
     buffer_add_string(&editor->files[editor->current_file].string, 4, u"    ");
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_enter(Editor* restrict editor) {
     buffer_add_char(&editor->files[editor->current_file].string, u'\n');
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_input(Editor* restrict editor, char16_t ch) {
     buffer_add_char(&editor->files[editor->current_file].string, ch);
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_paste(Editor* restrict editor, char16_t* str) {
     buffer_add_string(&editor->files[editor->current_file].string, u_strlen(str), str);
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_mouse_wheel(Editor* restrict editor, int32_t delta) {
@@ -90,7 +90,8 @@ void editor_left_click(Editor* restrict editor, DemiFont* restrict font, float x
                     && y < editor->height - (editor->gui.size.y >> 2)) {
                     file_close(editor, i);
                 }
-                editor->current_file = i;
+                else
+                    editor->current_file = i;
                 render_content_projection(editor->width, editor->height, &editor->files[i]);
                 return;
             }
@@ -121,21 +122,21 @@ reach_nl:
         string->position++;
         pos--;
     }
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_left(Editor* restrict editor) {
     StringBuffer* string = &editor->files[editor->current_file].string;
     if (string->position > 0)
         string->position--;
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_right(Editor* restrict editor) {
     StringBuffer* string = &editor->files[editor->current_file].string;
     if (string->position < string->length)
         string->position++;
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_down(Editor* restrict editor) {
@@ -155,7 +156,7 @@ void editor_down(Editor* restrict editor) {
         string->position++;
         pos--;
     }   
-    editor->flags |= 0b100000;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_camera_to_cursor(Editor* restrict editor, float x, float y, float advance, float nl_height, float min_x) {

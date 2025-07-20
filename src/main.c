@@ -2,6 +2,7 @@
 #include "core/editor.h"
 #include "core/font.h"
 #include "core/gui.h"
+#include "main_helper.c"
 
 const float light_violet[3] = {149.0f / 255, 106.0f / 255, 1.0f};
 const float violet[3]       = {127.0f / 255, 0.0f, 1.0f};
@@ -53,10 +54,11 @@ int32_t CALLBACK WinMain(
     Platform platform = {0};
     platform_init(&platform, &editor, &font, u"DemiEditor");
     editor_init(&editor);
-    font_init(&font, editor.uniform_limit, editor.flags & 1); 
+    color_map_init();
+    font_init(&font, editor.uniform_limit, editor.flags & FLAGS_GL46); 
     font_rebuild(&font, &editor, 15, editor.dpi_scale);
     render_init(editor.width, editor.height, &editor.files[editor.current_file], &font);
-    gui_init(&editor.gui, editor.flags & 1);
+    gui_init(&editor.gui, editor.flags & FLAGS_GL46);
     multithreading_init(&editor);
 
     RenderData* data = &editor.data;
@@ -69,11 +71,11 @@ int32_t CALLBACK WinMain(
     
     platform_show_window(&platform);
     while (running) {
-        while (editor.flags & 0b10) {
+        while (editor.flags & FLAGS_MINIMIZED) {
             platform_sleep(100);
             platform_msg(&running);
         }
-        if (editor.flags & 0b1000)
+        if (editor.flags & FLAGS_VSYNC_OFF)
             platform_sleep(5);
             
         glClearColor(dark[0], dark[1], dark[2], 1.0f);
@@ -108,9 +110,9 @@ int32_t CALLBACK WinMain(
             float buffer_text_x = (text_x * 2) + (num->advance * num_count(data->last_line));
             float cursor_text_x = buffer_text_x + (num->advance * data->since_nl) - (num->advance >> 1);
             float cursor_text_y = text_y - (nl_height * (data->current_line - 1)); 
-            if (editor.flags & 0b100000) {
+            if (editor.flags & FLAGS_ADJUST_CAMERA_TO_CURSOR) {
                 editor_camera_to_cursor(&editor, cursor_text_x, cursor_text_y, num->advance, nl_height, buffer_text_x);
-                editor.flags &= ~0b100000;
+                editor.flags &= ~FLAGS_ADJUST_CAMERA_TO_CURSOR;
             }
 
             render_text_bind(0);
@@ -122,7 +124,11 @@ int32_t CALLBACK WinMain(
         platform_msg(&running);
         platform_swap_buffers(&platform);
     }
+    platform_hide_window(&platform);
 
+    for (uint8_t i = 0; i < editor.files_opened; i++)
+        file_close(&editor, i);
+    color_map_destruct();
     multithreading_destruct();
     font_destruct(&font);
     editor_destruct(&editor);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../include.h"
-#include "../helper/globjects.h"
+#include "globjects.h"
 #include "render.h"
 #include "gui.h"
 

@@ -1,8 +1,8 @@
 #pragma once
 #include "../include.h"
-#include "../helper/math.h"
+#include "math.h"
 #include "string.h"
-#include "../helper/globjects.h"
+#include "globjects.h"
 
 void render_init(int32_t width, int32_t height, DemiFile* restrict file, DemiFont* restrict font_ptr);
 void render_gui_projection(int32_t width, int32_t height);

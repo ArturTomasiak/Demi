@@ -3,7 +3,7 @@
 void gui_size(Editor* restrict editor, uint16_t font_size) {
     editor->gui.size.x = font_size << 3;
     editor->gui.size.y = font_size << 1;
-    editor->flags |= 0b10000;
+    editor->flags |= FLAGS_RENGER_GUI_UPDATE;
 }
 
 void gui_init(GUI* restrict gui, _Bool gl46) {

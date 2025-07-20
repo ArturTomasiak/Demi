@@ -32,16 +32,16 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
         break;
         case WM_ACTIVATE:
             if (LOWORD(w_param) == WA_INACTIVE)
-                editor->flags |= 0b10;
+                editor->flags |= FLAGS_MINIMIZED;
             else
-                editor->flags &= ~0b10;
+                editor->flags &= ~FLAGS_MINIMIZED;
         break;
         case WM_SIZE:
             if (w_param == SIZE_MINIMIZED)
-                editor->flags |= 0b10;
+                editor->flags |= FLAGS_MINIMIZED;
             else {
-                editor->flags &= ~0b10;
-                editor->flags |= 0b10000;
+                editor->flags &= ~FLAGS_MINIMIZED;
+                editor->flags |= FLAGS_RENGER_GUI_UPDATE;
 
                 RECT client_rect;
                 GetClientRect(hwnd, &client_rect);
@@ -52,17 +52,20 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
         break;
         case WM_COMMAND: 
             switch(LOWORD(w_param)) {
-                case 1001: // open file
+                case 1001:
                     file_open_explorer(editor);
                 break;
-                case 1002: // save file
-                    // TODO
+                case 1002:
+                    file_save(editor, editor->current_file);
                 break;
-                case 1003: // save file as
-                    // TODO
+                case 1003:
+                    file_save_as(editor);
                 break;
-                case 1004: // settings
-                    editor->flags |= 0b100;
+                case 1004:
+                    file_save_all(editor);
+                break;
+                case 1005: // settings
+                    editor->flags |= FLAGS_SETTINGS_OPEN;
                 break;
             }
         break;
@@ -110,7 +113,7 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                 break;
                 case 'S':
                     if (GetKeyState(VK_CONTROL) & 0x8000) {
-                        // TODO
+                        file_save(editor, editor->current_file);
                     }
                 break;
                 case VK_UP:
@@ -182,7 +185,7 @@ _Bool platform_init(Platform* restrict platform, Editor* restrict editor, DemiFo
     if (gl_fallback_version)
         editor->flags = 0;
     else
-        editor->flags = 1;
+        editor->flags = FLAGS_GL46;
     wglDeleteContext(temp_context);
 
     if (!gladLoaderLoadGL()) {
@@ -208,6 +211,12 @@ _Bool platform_init(Platform* restrict platform, Editor* restrict editor, DemiFo
 void platform_show_window(Platform* restrict platform) {
     Windows* win = platform->window_data;
     ShowWindow(win->hwnd, SW_SHOW);
+    UpdateWindow(win->hwnd);
+}
+
+void platform_hide_window(Platform* restrict platform) {
+    Windows* win = platform->window_data;
+    ShowWindow(win->hwnd, SW_HIDE);
     UpdateWindow(win->hwnd);
 }
 
@@ -298,8 +307,9 @@ static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwn
     AppendMenuW(file_menu, MF_STRING, 1001, L"Open File");
     AppendMenuW(file_menu, MF_STRING, 1002, L"Save File");
     AppendMenuW(file_menu, MF_STRING, 1003, L"Save File As");
+    AppendMenuW(file_menu, MF_STRING, 1004, L"Save All Files");
     AppendMenuW(file_menu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(file_menu, MF_STRING, 1004, L"Settings");
+    AppendMenu(file_menu, MF_STRING, 1005, L"Settings");
     AppendMenuW(menu_bar, MF_POPUP, (UINT_PTR)file_menu, L"File");
  
     ZeroMemory(wc, sizeof *wc);
