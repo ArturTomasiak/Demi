@@ -18,6 +18,8 @@ void buffer_init_str(StringBuffer* restrict string, uint64_t len, char16_t* str)
         return;
     }
     memcpy(string->buffer, str, len * sizeof(char16_t));
+    string->last_change[0] = 0;
+    string->last_change[1] = len;
     color_map_update(string);
 }
 
@@ -41,13 +43,16 @@ void buffer_add_char(StringBuffer* restrict string, char16_t ch) {
         }
     }
     memmove(string->buffer + string->position + 1, string->buffer + string->position, (string->length - string->position) * sizeof(char16_t));
+    memmove(string->color_map + string->position + 1, string->color_map + string->position, (string->length - string->position) * sizeof(int32_t));
     string->buffer[string->position] = ch;
     string->buffer[string->length] = '\0';
+    string->last_change[0] = string->position;
+    string->last_change[1] = string->position;
     string->position++;
 
     if (ch == u'\n')
         return;
-    
+
     color_map_update(string);
 }
 
@@ -55,10 +60,13 @@ void buffer_rem_char(StringBuffer* restrict string) {
     if (string->position > string->length || string->position == 0)
         return;
     memmove(string->buffer + string->position - 1, string->buffer + string->position, (string->length - string->position) * sizeof(char16_t));
+    memmove(string->color_map + string->position - 1, string->color_map + string->position, (string->length - string->position) * sizeof(int32_t));
     string->length--;
     string->position--;
     string->buffer[string->length] = '\0';
 
+    string->last_change[0] = string->position > 0 ? string->position - 1 : 0;
+    string->last_change[1] = string->last_change[0];
     color_map_update(string);
 } 
 
@@ -77,14 +85,17 @@ void buffer_add_string(StringBuffer* restrict string, uint64_t len, char16_t* st
             return;
         }
         memmove(string->buffer + string->position + len, string->buffer + string->position, (string->length - string->position - len) * sizeof(char16_t));
+        memmove(string->color_map + string->position + len, string->color_map + string->position, (string->length - string->position - len) * sizeof(int32_t));
         memcpy(string->buffer + string->position, str, len * sizeof(char16_t));
         string->buffer[string->length] = '\0';
+        string->last_change[0] = string->position;
         string->position += len;
+        string->last_change[1] = string->position;
         color_map_update(string);
     }
 }
 
-uint64_t u_strlen(const char16_t* str) {
+uint64_t u_strlen(const char16_t* restrict str) {
     const char16_t* s = str;
     while (*s) ++s;
     return s - str;
@@ -113,7 +124,7 @@ char16_t* num_to_ustr(uint16_t num, uint16_t* result_len) {
     return str;
 }
 
-_Bool is_printable(const DemiFont* restrict font, char16_t ch) {
+_Bool is_printable(char16_t ch) {
     if (ch == u' ')
         return 1;
     int16_t val = (int16_t)ch;

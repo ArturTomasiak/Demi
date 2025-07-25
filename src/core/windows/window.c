@@ -21,14 +21,12 @@ static inline HGLRC create_context(HDC hdc, HWND hwnd, _Bool* gl_version_fallbac
 static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwnd, const char16_t* app_name, int32_t width, int32_t height);
 
 LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) { 
-    Editor* editor = (Editor*)GetWindowLongPtr(hwnd, 0);
-    DemiFont* font = (DemiFont*)GetWindowLongPtr(hwnd, sizeof(void*));
     switch(msg) {
         case WM_CLOSE: 
             PostQuitMessage(0);
         break;
         case WM_DPICHANGED:
-            editor_dpi_change(editor, font, LOWORD(w_param));
+            editor_dpi_change(LOWORD(w_param));
         break;
         case WM_ACTIVATE:
             if (LOWORD(w_param) == WA_INACTIVE)
@@ -47,22 +45,22 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                 GetClientRect(hwnd, &client_rect);
                 editor->width = client_rect.right - client_rect.left;
                 editor->height = client_rect.bottom - client_rect.top;
-                editor_resize(editor);
+                editor_resize();
             }
         break;
         case WM_COMMAND: 
             switch(LOWORD(w_param)) {
                 case 1001:
-                    file_open_explorer(editor);
+                    file_open_explorer();
                 break;
                 case 1002:
-                    file_save(editor, editor->current_file);
+                    file_save(editor->current_file);
                 break;
                 case 1003:
-                    file_save_as(editor);
+                    file_save_as();
                 break;
                 case 1004:
-                    file_save_all(editor);
+                    file_save_all();
                 break;
                 case 1005: // settings
                     editor->flags |= FLAGS_SETTINGS_OPEN;
@@ -70,25 +68,25 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
             }
         break;
         case WM_MOUSEWHEEL:
-            editor_mouse_wheel(editor, (short)HIWORD(w_param));
+            editor_mouse_wheel((short)HIWORD(w_param));
         break;
         case WM_LBUTTONUP:
-            editor_left_click(editor, font, (float)(short)LOWORD(l_param), (float)(short)HIWORD(l_param)); 
+            editor_left_click((float)(short)LOWORD(l_param), (float)(short)HIWORD(l_param)); 
         break;
         case WM_CHAR:
             switch(w_param) {
                 case 8:
-                    editor_backspace(editor);
+                    editor_backspace();
                 break;
                 case 9:
-                    editor_tab(editor);
+                    editor_tab();
                 break;
                 case 13:
-                    editor_enter(editor);
+                    editor_enter();
                 break;
                 default:
-                    if (is_printable(font, w_param))
-                        editor_input(editor, w_param);
+                    if (is_printable(w_param))
+                        editor_input(w_param);
                 break;
             }
         break;
@@ -102,7 +100,7 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                                 if (clipboard) {
                                     char16_t* text = GlobalLock(clipboard);
                                     if (text) {
-                                        editor_paste(editor, text);
+                                        editor_paste(text);
                                         GlobalUnlock(clipboard);
                                     }
                                 }
@@ -113,20 +111,20 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                 break;
                 case 'S':
                     if (GetKeyState(VK_CONTROL) & 0x8000) {
-                        file_save(editor, editor->current_file);
+                        file_save(editor->current_file);
                     }
                 break;
                 case VK_UP:
-                    editor_up(editor);
+                    editor_up();
                 break;
                 case VK_LEFT:
-                    editor_left(editor);
+                    editor_left();
                 break;
                 case VK_RIGHT:
-                    editor_right(editor);
+                    editor_right();
                 break;
                 case VK_DOWN:
-                    editor_down(editor);
+                    editor_down();
                 break;
             }
         break;
@@ -155,20 +153,17 @@ void platform_destruct(Platform* restrict platform) {
     free(platform->window_data);
 }
 
-_Bool platform_init(Platform* restrict platform, Editor* restrict editor, DemiFont* restrict font, const char16_t* app_name) {
+_Bool platform_init(Platform* restrict platform, const char16_t* app_name) {
     Windows* win = malloc(sizeof(Windows));
     platform->window_data = win;
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     win->hinstance = GetModuleHandle(NULL);
 
-    editor->width  = 960;
-    editor->height = 540;
+    editor->width  = 1200;
+    editor->height = 700;
 
     if (!create_window(&win->wc, win->hinstance, &win->hwnd, app_name, editor->width, editor->height))
         return 0;
-
-    SetWindowLongPtr(win->hwnd, 0, (LONG_PTR)editor);
-    SetWindowLongPtr(win->hwnd, sizeof(void*), (LONG_PTR)font);
 
     win->hdc = GetDC(win->hwnd);
     HGLRC temp_context = create_temp_context(win->hdc, win->hwnd);
@@ -321,7 +316,6 @@ static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwn
     wc->hIcon = (HICON)LoadImage(hinstance, application_icon, IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
     wc->hIconSm = (HICON)LoadImage(hinstance, application_icon, IMAGE_ICON, 16, 16, LR_LOADFROMFILE);
     wc->hCursor = LoadCursor(NULL, IDC_ARROW);
-    wc->cbWndExtra = sizeof(void*) * 2;
     RegisterClassEx(wc);
     *hwnd = CreateWindowEx(
         0,

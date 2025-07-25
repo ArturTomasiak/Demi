@@ -2,22 +2,25 @@
 
 static float content_projection[16] = {0};
 static float gui_projection[16] = {0};
-static DemiFont* restrict font;
+static float nl_height;
 
-void render_init(int32_t width, int32_t height, DemiFile* restrict file, DemiFont* restrict font_ptr) {
-    font = font_ptr;
+void render_init(int32_t width, int32_t height, DemiFile* restrict file) {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_MULTISAMPLE);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     render_gui_projection(width, height);
     render_content_projection(width, height, file);
 }
 
-void render_gui_projection(int32_t width, int32_t height) {
+void render_update_nl_height(float new_height) {
+    nl_height = new_height;
+}
+
+extern inline void render_gui_projection(int32_t width, int32_t height) {
     math_orthographic_f4x4(gui_projection, 0, width, 0, height, -1.0f, 1.0f);
 }
 
-void render_content_projection(int32_t width, int32_t height, DemiFile* restrict file) {
+extern inline void render_content_projection(int32_t width, int32_t height, DemiFile* restrict file) {
     math_orthographic_f4x4(content_projection, file->camera_x, file->camera_x + width, file->camera_y, file->camera_y + height, -1.0f, 1.0f);
 }
 
@@ -40,15 +43,20 @@ static void render_text_call(Shader* restrict shader, float* transforms, int32_t
     shader_uniform_int32_t_arr(shader, "letter_map", letter_map, length);
     shader_uniform_int32_t_arr(shader, "texture_map", texture_map, length);
     shader_uniform_int32_t_arr(shader, "color_map", color_map, length);
+
     glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, length);
 }   
 
-void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_t len, float start_x, float start_y, Editor* restrict editor) {
+void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_t len, float start_x, float start_y, _Bool gui_text) {
     DemiFile* file;
-    if (editor)
+    float y_limit[2];
+    if (!gui_text) {
         file = &editor->files[editor->current_file];
+        y_limit[0] = file->camera_y + editor->height - (gui->size.y + gui_margin_y) - font->size;
+        y_limit[1] = file->camera_y - font->size;
+    }
+
     int32_t advance   = font->character['a'].advance; // safe with monospaced fonts
-    float nl_height =  font->character[u'\n'].size.y * font->line_spacing;
     float translate[16] = {0}, scale_matrix[16] = {0};
     int32_t working_color_map[font->arr_limit];
     float x = start_x;
@@ -68,9 +76,9 @@ void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_
         else {
             float xpos = x + character->bearing.x;
             float ypos = y + character->bearing.y - font->size;
-            if (!editor)
+            if (gui_text)
                 ;
-            else if (ypos > file->camera_y + editor->height - (editor->gui.size.y + gui_margin_y) - nl_height || ypos < file->camera_y)
+            else if (y > y_limit[0] || y < y_limit[1])
                 continue;
             memset(translate, 0.0f, 16 * sizeof(float));
             memset(scale_matrix, 0.0f, 16 * sizeof(float));
@@ -101,8 +109,7 @@ void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_
         render_text_call(&font->shader, font->transforms, font->letter_map, working_color_map, font->texture_map, working_index);
 }
 
-void render_gui(Editor* restrict editor) {
-    GUI* gui = &editor->gui;
+void render_gui() {
     float current_x = 0;
     static float rect_width = 0, rect_height = 0, close_size = 0, rect_y = 0, close_y = 0, text_ypos = 0;
 
@@ -164,7 +171,7 @@ void render_gui(Editor* restrict editor) {
         float text_xpos = current_x + text_start_x;
 
         render_text_bind(1);
-        render_text(name, color_map, name_len, text_xpos, text_ypos, 0);
+        render_text(name, color_map, name_len, text_xpos, text_ypos, 1);
         current_x += gui->size.x;
     }
 }

@@ -1,7 +1,7 @@
 # Demi
 A new (incomplete) GUI text edditor written in C.
 
-![screenshot](scr.png)
+![screenshot](screenshot.png)
 
 ## Table of Contents
 
@@ -31,7 +31,8 @@ core/
 ├── render.c
 ├── render.h
 ├── string.c 
-├── string.h     # StringBuffer, setting text color, char16_t functions and setting up printing lines
+├── string.h     # StringBuffer and char16_t functions
+├── color_map.c  # text highlighting logic
 ├── globjects.c
 ├── globjects.h  # shaders, vaos, vbos
 ├── math.c
@@ -39,7 +40,7 @@ core/
 ├── platform_layer.h
 ├── windows/
     ├── error.c  # message boxes and gl errors
-    ├── file.c   # file opening, saving etc
+    ├── file.c   # file opening, saving and closing
     ├── window.c # window creating and managing
 ```
 
@@ -67,7 +68,8 @@ install [glad2](https://gen.glad.sh/) to C:\libraries with the following setting
 - WGL_ARB_create_context,
 - WGL_ARB_create_context_profile,
 - WGL_ARB_multisample,
-- WGL_EXT_swap_control
+- WGL_EXT_swap_control,
+- GL_EXT_texture_filter_anisotropic
 - loader
 
 build freetype from [source](https://gitlab.freedesktop.org/freetype/freetype)

@@ -110,6 +110,10 @@ extern inline void shader_uniform_float(Shader* restrict shader, const char* con
     glUniform1f(get_uniform_location(shader, name), value);
 }
 
+extern inline void shader_uniform_float_2(Shader* restrict shader, const char* const name, float v0, float v1) {
+    glUniform2f(get_uniform_location(shader, name), v0, v1);
+}
+
 extern inline void shader_uniform_float_3(Shader* restrict shader, const char* const name, float v0, float v1, float v2) {
     glUniform3f(get_uniform_location(shader, name), v0, v1, v2);
 }

@@ -10,8 +10,8 @@ uniform mat4 projection;
 uniform int  current;
 
 void main() {
-    gl_Position = projection * transforms[gl_InstanceID] * vec4(vertex.xy, 0.0, 1.0);
+    gl_Position = projection * transforms[gl_InstanceID] * vec4(vertex, 0.0, 1.0);
     vs_out.index = gl_InstanceID;
-    vs_out.coordinates = vertex.xy;
+    vs_out.coordinates = vertex;
     vs_out.coordinates.y = 1.0f - vs_out.coordinates.y;
 }

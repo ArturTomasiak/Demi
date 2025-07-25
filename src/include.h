@@ -38,22 +38,22 @@
 #endif
 
 //////////////////
-// declarations //
+// editor.flags //
 //////////////////
 
-extern const float light_violet[3];
-extern const float violet[3];
-extern const float orange[3];
-extern const float gray[3];
-extern const float dark[3];
-extern uint8_t text_start_x;
-extern const uint8_t gui_margin_y;
+#define FLAGS_GL46                    0b1
+#define FLAGS_MINIMIZED               0b10
+#define FLAGS_VSYNC_OFF               0b100
+#define FLAGS_SETTINGS_OPEN           0b1000
+#define FLAGS_RENGER_GUI_UPDATE       0b10000
+#define FLAGS_ADJUST_CAMERA_TO_CURSOR 0b100000
+#define FLAGS_FONT_RESIZED            0b1000000
 
 //////////////
 // typedefs //
 //////////////
 
-#pragma pack(push, 1)  // remove padding, similar to __attribute__ ((packed))
+#pragma pack(push, 1)  // crossplatform equivalent of __attribute__ ((packed))
 
 typedef struct {
     int32_t location;
@@ -112,6 +112,7 @@ typedef struct {
     uint64_t  length;
     uint64_t  allocated_memory;
     uint64_t  position;
+    uint64_t  last_change[2];
 } StringBuffer;
 
 typedef struct {
@@ -147,14 +148,13 @@ typedef struct {
 typedef struct {
     float      dpi_scale;
     float      scroll_speed;
-    uint8_t    flags; // flags defined at the bottom of the file
+    uint8_t    flags;
     uint8_t    files_opened;
     uint8_t    current_file;
     uint32_t   dpi;
     int32_t    uniform_limit;
     DemiFile*  files;
     RenderData data;
-    GUI        gui;
 
     int32_t width;
     int32_t height; 
@@ -184,19 +184,11 @@ typedef struct {
     VBO vbo;
 
     int32_t arr_limit;
+    float max_anisotropy;
 
     FT_Library ft_lib;
     FT_Face ft_face;
 } DemiFont;
-
-typedef struct {
-    char16_t** keyword;
-    uint16_t   keyword_len;
-    char16_t** variable;
-    uint16_t   variable_len;
-    char16_t** name;
-    uint32_t   name_len;
-} ColorMapData;
 
 #pragma pack(pop)
 
@@ -211,14 +203,18 @@ void fatal_error (char16_t* msg);
 void check_gl_errors();
 #endif
 
-///////////
-// flags //
-///////////
+//////////////////
+// declarations //
+//////////////////
 
-#define FLAGS_GL46                    0b1
-#define FLAGS_MINIMIZED               0b10
-#define FLAGS_VSYNC_OFF               0b100
-#define FLAGS_SETTINGS_OPEN           0b1000
-#define FLAGS_RENGER_GUI_UPDATE       0b10000
-#define FLAGS_ADJUST_CAMERA_TO_CURSOR 0b100000
-#define FLAGS_UNUSED                  0b1000000
+extern const float light_violet[3];
+extern const float violet[3];
+extern const float orange[3];
+extern const float gray[3];
+extern const float dark[3];
+extern uint8_t text_start_x;
+extern const uint8_t gui_margin_y;
+
+extern GUI*      restrict gui;
+extern Editor*   restrict editor;
+extern DemiFont* restrict font;

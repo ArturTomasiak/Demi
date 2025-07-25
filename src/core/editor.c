@@ -1,6 +1,6 @@
 #include "editor.h"
 
-void editor_init(Editor* restrict editor) {
+void editor_init() {
     glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &editor->uniform_limit);
 
     editor->dpi_scale = (float)editor->dpi / 96.0f;
@@ -23,19 +23,18 @@ void editor_init(Editor* restrict editor) {
     buffer_init(&file->string);
 }
 
-void editor_resize(Editor* restrict editor) {
+void editor_resize() {
     glViewport(0, 0, editor->width, editor->height);
     render_gui_projection(editor->width, editor->height);
     render_content_projection(editor->width, editor->height, &editor->files[editor->current_file]);
 }
 
-void editor_dpi_change(Editor* restrict editor, DemiFont* restrict font, uint32_t dpi) {
+void editor_dpi_change(uint32_t dpi) {
     editor->dpi       = dpi;
     editor->dpi_scale = (float)editor->dpi / 96.0f;
-    font_rebuild(font, editor, 15, editor->dpi_scale); // TODO replace magic number with setting
 }
 
-void editor_destruct(Editor* restrict editor) {
+void editor_destruct() {
     for (uint8_t i = 0; i < editor->files_opened; i++) {
         buffer_destruct(&editor->files[i].string);
         free(editor->files[i].file_name);
@@ -44,32 +43,32 @@ void editor_destruct(Editor* restrict editor) {
     free(editor->files);
 }
 
-void editor_backspace(Editor* restrict editor) {
+void editor_backspace() {
     buffer_rem_char(&editor->files[editor->current_file].string);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_tab(Editor* restrict editor) {
+void editor_tab() {
     buffer_add_string(&editor->files[editor->current_file].string, 4, u"    ");
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_enter(Editor* restrict editor) {
+void editor_enter() {
     buffer_add_char(&editor->files[editor->current_file].string, u'\n');
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_input(Editor* restrict editor, char16_t ch) {
+void editor_input(char16_t ch) {
     buffer_add_char(&editor->files[editor->current_file].string, ch);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_paste(Editor* restrict editor, char16_t* str) {
+void editor_paste(char16_t* str) {
     buffer_add_string(&editor->files[editor->current_file].string, u_strlen(str), str);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_mouse_wheel(Editor* restrict editor, int32_t delta) {
+void editor_mouse_wheel(int32_t delta) {
     delta *= editor->scroll_speed;
     DemiFile* file = &editor->files[editor->current_file];
     file->camera_y += delta;
@@ -78,17 +77,17 @@ void editor_mouse_wheel(Editor* restrict editor, int32_t delta) {
     render_content_projection(editor->width, editor->height, file);
 }
 
-void editor_left_click(Editor* restrict editor, DemiFont* restrict font, float x, float y) {
+void editor_left_click(float x, float y) {
     y = editor->height - y;
-    if (y > editor->height - editor->gui.size.y) {
+    if (y > editor->height - gui->size.y) {
         int32_t current_x = 0;
-        int32_t size_x    = editor->gui.size.x;
+        int32_t size_x    = gui->size.x;
         for (uint8_t i = 0; i < editor->files_opened; i++) {
             if (x > current_x && x < current_x + size_x) {
-                if (x > current_x + editor->gui.size.x - font->size
-                    && y > editor->height - font->size - (editor->gui.size.y >> 2)
-                    && y < editor->height - (editor->gui.size.y >> 2)) {
-                    file_close(editor, i);
+                if (x > current_x + gui->size.x - font->size
+                    && y > editor->height - font->size - (gui->size.y >> 2)
+                    && y < editor->height - (gui->size.y >> 2)) {
+                    file_close(i);
                 }
                 else
                     editor->current_file = i;
@@ -100,7 +99,7 @@ void editor_left_click(Editor* restrict editor, DemiFont* restrict font, float x
     }
 }
 
-void editor_up(Editor* restrict editor) {
+void editor_up() {
     StringBuffer* string = &editor->files[editor->current_file].string;
     if (string->position == 0)
         return;
@@ -125,21 +124,21 @@ reach_nl:
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_left(Editor* restrict editor) {
+void editor_left() {
     StringBuffer* string = &editor->files[editor->current_file].string;
     if (string->position > 0)
         string->position--;
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_right(Editor* restrict editor) {
+void editor_right() {
     StringBuffer* string = &editor->files[editor->current_file].string;
     if (string->position < string->length)
         string->position++;
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_down(Editor* restrict editor) {
+void editor_down() {
     StringBuffer* string = &editor->files[editor->current_file].string;
     uint64_t pos = 0;
     if (string->position == string->length) {
@@ -159,11 +158,11 @@ void editor_down(Editor* restrict editor) {
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_camera_to_cursor(Editor* restrict editor, float x, float y, float advance, float nl_height, float min_x) {
+void editor_camera_to_cursor(float x, float y, float advance, float nl_height, float min_x) {
     DemiFile* file = &editor->files[editor->current_file];
     while (y < file->camera_y)
         file->camera_y -= nl_height;
-    while (y > file->camera_y + editor->height - editor->gui.size.y - nl_height)
+    while (y > file->camera_y + editor->height - gui->size.y - nl_height)
         file->camera_y += nl_height;
     while (x - file->camera_x > editor->width - advance)
         file->camera_x += advance;

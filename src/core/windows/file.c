@@ -49,7 +49,7 @@ static void set_file_path(DemiFile* restrict file, const char16_t* path) {
     file->file_name[name_len] = u'\0';
 }
 
-void file_open_explorer(Editor* restrict editor) {
+void file_open_explorer() {
     char16_t file_path[MAX_PATH] = u"";
     OPENFILENAME explorer = {0};
     explorer.lStructSize = sizeof(explorer);
@@ -60,9 +60,9 @@ void file_open_explorer(Editor* restrict editor) {
     explorer.lpstrTitle = u"Select a file to open";
 
     if (GetOpenFileName(&explorer))
-        file_open(editor, file_path);
+        file_open(file_path);
 }
-void file_open(Editor* restrict editor, const char16_t* file_path) {
+void file_open(const char16_t* file_path) {
     FILE* raw = _wfopen(file_path, L"rb");
     if (!raw) {  
         error(u"could not open file", u"error");  
@@ -130,9 +130,10 @@ void file_open(Editor* restrict editor, const char16_t* file_path) {
     free(out);
 
     set_file_path(current, file_path);
+    render_content_projection(editor->width, editor->height, &editor->files[editor->current_file]);
 }
 
-void file_close(Editor* restrict editor, uint8_t file_index) {
+void file_close(uint8_t file_index) {
     DemiFile* file = &editor->files[file_index];
     buffer_destruct(&file->string);
     free(file->path); 
@@ -147,12 +148,12 @@ void file_close(Editor* restrict editor, uint8_t file_index) {
     memcpy(file, &editor->files[editor->files_opened], file_size);
 }
 
-void file_save(Editor* restrict editor, uint8_t saved_file) {
+void file_save(uint8_t saved_file) {
     if (editor->files_opened == 0)
         return;
     DemiFile* current = &editor->files[saved_file];
     if (!current->path) {
-        file_save_as(editor);
+        file_save_as();
         return;
     }
     FILE* file = _wfopen(current->path, u"wb");
@@ -186,7 +187,7 @@ void file_save(Editor* restrict editor, uint8_t saved_file) {
     fclose(file);
 }
 
-void file_save_as(Editor* restrict editor) {
+void file_save_as() {
     if (editor->files_opened == 0)
         return;
     char16_t file_path[MAX_PATH] = u"";
@@ -214,15 +215,15 @@ void file_save_as(Editor* restrict editor) {
                 current->encoding = UTF8;
             break;
         }
-        file_save(editor, editor->current_file);
+        file_save(editor->current_file);
     }
 }
 
-void file_save_all(Editor* restrict editor) {
+void file_save_all() {
     if (editor->files_opened == 0)
         return;
     for (uint8_t i = 0; i < editor->files_opened; i++)
-        file_save(editor, i);
+        file_save(i);
 }
 
 #endif

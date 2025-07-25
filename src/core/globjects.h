@@ -12,6 +12,7 @@ void shader_unbind();
 void shader_uniform_int32_t(Shader* restrict shader, const char* name, int32_t value);
 void shader_uniform_int32_t_arr(Shader* restrict shader, const char* name, int32_t* matrix, uint32_t length);
 void shader_uniform_float(Shader* restrict shader, const char* name, float value);
+void shader_uniform_float_2(Shader* restrict shader, const char* const name, float v0, float v1);
 void shader_uniform_float_3(Shader* restrict shader, const char* name, float v0, float v1, float v2);
 void shader_uniform_float_4(Shader* restrict shader, const char* name, float v0, float v1, float v2, float v3);
 void shader_uniform_mat4(Shader* restrict shader, const char* name, float* matrix, uint32_t length);

@@ -1,12 +1,12 @@
 #include "gui.h"
 
-void gui_size(Editor* restrict editor, uint16_t font_size) {
-    editor->gui.size.x = font_size << 3;
-    editor->gui.size.y = font_size << 1;
+void gui_size(uint16_t font_size) {
+    gui->size.x = font_size << 3;
+    gui->size.y = font_size << 1;
     editor->flags |= FLAGS_RENGER_GUI_UPDATE;
 }
 
-void gui_init(GUI* restrict gui, _Bool gl46) {
+void gui_init(_Bool gl46) {
     shader_init(&gui->shader, "../resources/shaders/gui_vert.glsl", "../resources/shaders/gui_frag.glsl", 0, 0, gl46);
     
     gui->rectangle_indices[0] = 0;
@@ -50,7 +50,7 @@ void gui_init(GUI* restrict gui, _Bool gl46) {
     vao_layout_destruct(&close_layout);
 }   
 
-void gui_destruct(GUI* restrict gui) {
+void gui_destruct() {
     shader_destruct(&gui->shader);
     vao_destruct(&gui->vao[0]);
     vao_destruct(&gui->vao[1]);

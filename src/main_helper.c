@@ -1,7 +1,7 @@
 #include "include.h"
 #include "core/string.h"
 
-extern inline void setup_lines_rendering(Editor* restrict editor) {
+extern inline void setup_lines(Editor* restrict editor) {
     StringBuffer* current = &editor->files[editor->current_file].string;
     uint32_t pos_since_nl = 0;
     uint64_t lines = 1;
