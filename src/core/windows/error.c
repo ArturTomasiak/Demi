@@ -28,7 +28,7 @@ static char* translate_gl_error(GLenum error) {
         case GL_STACK_UNDERFLOW:
             return "stack underflow";
         case GL_OUT_OF_MEMORY:
-            return "memory allocation failed";
+            return "memory allocation failed (gl error)";
         case GL_INVALID_FRAMEBUFFER_OPERATION:
             return "writing to incomplete framebuffer";
         default:

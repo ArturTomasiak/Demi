@@ -2,14 +2,6 @@
 
 static KeywordMap* restrict keyword;
 
-static _Bool is_word_boundary(char16_t ch) {
-    return ch == u' ' || ch == u'+' || ch == u'-' || ch == u'\n' ||
-           ch == u'(' || ch == u')' || ch == u'{' || ch == u'}' || 
-           ch == u'[' || ch == u']' || ch == u';' || ch == u',' ||
-           ch == u'.' || ch == u':' || ch == u'*' || ch == u'/' ||
-           ch == u'\0';
-}
-
 static inline void search_nl(StringBuffer* restrict string, uint64_t* prev, uint64_t* next) {
     while (*prev > 0 && string->buffer[(*prev)--] != u'\n') ;
     while (*next < string->length && string->buffer[(*next)++] != u'\n') ;
@@ -23,7 +15,7 @@ void color_map_update(StringBuffer* restrict string) {
     while (i < end) {
         string->color_map[i] = 0;
 
-        if (i < end && string->buffer[i] == u'/' && string->buffer[i + 1] == u'/') {
+        if (string->buffer[i] == u'/' && string->buffer[i + 1] == u'/') {
             while (i < end && string->buffer[i + 1] != u'\n')
                 string->color_map[i++] = 1;
             goto end;
@@ -45,6 +37,15 @@ end:
     }
 }
 
+void color_map_comment(StringBuffer* restrict string) {
+    for (uint64_t j = 0; j < string->length; j++) {
+        if (string->buffer[j] == u'/' && string->buffer[j + 1] == u'*') {
+            while (j < string->length && !(string->buffer[j - 2] == u'*' && string->buffer[j - 1] == u'/'))
+                string->color_map[j++] = 1;
+        }
+    }
+}
+
 static void keyword_map_add(const char16_t** arr, uint8_t color_val) {
     uint8_t i = 0;
     while (arr[i] != NULL) {
@@ -54,7 +55,7 @@ static void keyword_map_add(const char16_t** arr, uint8_t color_val) {
         uint16_t idx_len = ++keyword->alloc_map[ch];
         uint16_t str_len = u_strlen(arr[i]) + 1;
 
-        keyword->map[ch]   = realloc(keyword->map[ch], idx_len * sizeof(char16_t*));         if (!keyword->map[ch])       goto fail;
+        keyword->map[ch]       = realloc(keyword->map[ch], idx_len * sizeof(char16_t*));     if (!keyword->map[ch])       goto fail;
         keyword->color_map[ch] = realloc(keyword->color_map[ch], idx_len * sizeof(uint8_t)); if (!keyword->color_map[ch]) goto fail;
         idx_len--;
         keyword->color_map[ch][idx_len] = color_val;
@@ -67,18 +68,20 @@ while_end:
     return;
 
 fail:
-    fatal_error(u"memory allocation failed");
+    fatal_error(u"memory allocation failed\ncolor_map.c");
     return;
 }
 
 void keyword_map_init(KeywordMap* restrict map) {
-    const char16_t* c_keyword[27] = 
-        {u"if", u"while", u"for", u"switch", u"else", u"return", u"goto", u"#include", 
+    const char16_t* c_keyword[39] = 
+        {u"if", u"while", u"for", u"switch", u"else", u"return", u"goto", u"true", u"false", u"#include", 
         u"#pragma", u"#ifdef", u"#ifndef", u"#if", u"#endif", u"#elif", u"#define", u"#error", u"#else",
-        u"static", u"extern", u"inline", u"typedef", u"const", u"enum", u"struct", u"++", u"--", NULL};
-    const char16_t* c_variable[20] = 
+        u"static", u"extern", u"inline", u"typedef", u"const", u"enum", u"struct", u"++", u"--", u"register",
+        u"NULL", u"null", u"volatile", u"restrict", u"union", u"typeof", u"continue", u"break", u"case", NULL};
+    const char16_t* c_variable[24] = 
         {u"void", u"bool", u"_Bool", u"char", u"short", u"int", u"long", u"signed", u"unsigned", u"float", u"double",
-        u"int8_t", u"int16_t", u"int32_t", u"int64_t", u"uint8_t", u"uint16_t", u"uint32_t", u"uint64_t", NULL};
+        u"int8_t", u"int16_t", u"int32_t", u"int64_t", u"uint8_t", u"uint16_t", u"uint32_t", u"uint64_t", u"char8_t", 
+        u"char16_t", u"char32_t", u"wchar_t", NULL};
 
     keyword = map;
 
@@ -97,7 +100,7 @@ alloc_map_fail:
 color_map_fail:
             free(keyword->map);
 map_fail:
-            fatal_error(u"memory allocation failed");
+            fatal_error(u"memory allocation failed\ncolor_map.c");
             return;
 }
 

@@ -51,7 +51,7 @@ static char* shader_read(const char* const location, uint8_t texture_count, int3
     char* buffer = malloc(file_size + define_size + 1);
     if (!buffer) {
         fclose(file_pointer);
-        fatal_error(u"memory allocation failed");
+        fatal_error(u"memory allocation failed\nglobjects.c");
         return NULL;
     }
     strcpy(buffer, define_str);
@@ -139,13 +139,13 @@ int32_t get_uniform_location(Shader* restrict shader, const char* const name) {
     shader->cache_length++;
     shader->cache = realloc(shader->cache, sizeof(shader_uniform_cache) * shader->cache_length);
     if (!shader->cache) {
-        fatal_error(u"memory_allocation_failed");
+        fatal_error(u"memory allocation failed\nglobjects.c");
         return location;
     }
     uint16_t len = strlen(name);
     shader->cache[shader->cache_length - 1].name = malloc(len+1);
     if (!shader->cache[shader->cache_length - 1].name) {
-        fatal_error(u"memory_allocation_failed");
+        fatal_error(u"memory allocation failed\nglobjects.c");
         return location;
     }
     memcpy(shader->cache[shader->cache_length - 1].name, name, len);

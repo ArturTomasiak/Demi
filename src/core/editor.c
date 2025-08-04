@@ -1,6 +1,7 @@
 #include "editor.h"
 
 void editor_init() {
+    editor->flags |= FLAGS_RUNNING;
     glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &editor->uniform_limit);
 
     editor->dpi_scale = (float)editor->dpi / 96.0f;
@@ -10,11 +11,12 @@ void editor_init() {
     editor->files_opened = 1;
     editor->files = malloc(sizeof(DemiFile));
     if (!editor->files) {
-        fatal_error(u"memory allocation failed");
+        fatal_error(u"memory allocation failed\neditor.c");
         return;
     }
     DemiFile* file = &editor->files[0];
     memset(file, 0, sizeof(DemiFile));
+    memset(&file->string, 0, sizeof(StringBuffer));
     char16_t* unnamed = u"unnamed";
     uint8_t len = u_strlen(unnamed);
     file->file_name = malloc((len + 1) * sizeof(char16_t));
@@ -44,27 +46,56 @@ void editor_destruct() {
 }
 
 void editor_backspace() {
-    buffer_rem_char(&editor->files[editor->current_file].string);
+    DemiFile* file = &editor->files[editor->current_file];
+    buffer_rem_char(&file->string, 0);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_tab() {
-    buffer_add_string(&editor->files[editor->current_file].string, 4, u"    ");
+    DemiFile* file = &editor->files[editor->current_file];
+    buffer_add_string(&file->string, 4, u"    ", 0); // TODO add tab len setting
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_enter() {
-    buffer_add_char(&editor->files[editor->current_file].string, u'\n');
+    DemiFile* file = &editor->files[editor->current_file];
+    buffer_add_char(&file->string, u'\n', 0);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_input(char16_t ch) {
-    buffer_add_char(&editor->files[editor->current_file].string, ch);
+    DemiFile* file = &editor->files[editor->current_file];
+    buffer_add_char(&file->string, ch, 0);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_paste(char16_t* str) {
-    buffer_add_string(&editor->files[editor->current_file].string, u_strlen(str), str);
+    DemiFile* file = &editor->files[editor->current_file];
+    buffer_add_string(&file->string, u_strlen(str), str, 0);
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+}
+
+void editor_undo() {
+    DemiFile* file = &editor->files[editor->current_file];
+    undo_pop(&file->string);
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+}
+
+void editor_redo() {
+    DemiFile* file = &editor->files[editor->current_file];
+    redo_pop(&file->string);
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+}
+
+void editor_jump_top() {
+    DemiFile* file = &editor->files[editor->current_file];
+    file->string.position = 0;
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+}
+
+void editor_jump_bottom() {
+    DemiFile* file = &editor->files[editor->current_file];
+    file->string.position = file->string.length;
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 

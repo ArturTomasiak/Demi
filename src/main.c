@@ -15,8 +15,6 @@ GUI*      restrict gui;
 Editor*   restrict editor;
 DemiFont* restrict font;
 
-static _Bool running = 1;
-
 #ifdef demiwindows
 static HANDLE run_prepare;
 static HANDLE prepare_complete;
@@ -25,8 +23,9 @@ static DWORD  thread_id;
 DWORD WINAPI prepare(void* arg) {
     while (1) {
         WaitForSingleObject(run_prepare, INFINITE);
-        if (!running) break;
+    if (FLAGS_RUNNING & ~editor->flags) break;
         setup_lines(editor);
+        color_map_comment(&editor->files[editor->current_file].string);
         SetEvent(prepare_complete);
     }
     return 0;
@@ -82,14 +81,10 @@ int32_t CALLBACK WinMain(
     int32_t cursor_color_map[1] = {1};
     
     platform_show_window(&platform);
-    while (running) {
+    while (FLAGS_RUNNING & editor->flags) {
         while (editor->flags & FLAGS_MINIMIZED) {
-            platform_sleep(100);
-            platform_msg(&running);
+            platform_msg();
         }
-
-        if (editor->flags & FLAGS_VSYNC_OFF)
-            platform_sleep(5);
 
         if (editor->flags & FLAGS_FONT_RESIZED) {
             nl_height = (font->character[u'\n'].size.y * font->line_spacing);
@@ -141,13 +136,14 @@ int32_t CALLBACK WinMain(
             render_text(cursor, cursor_color_map, 1, cursor_text_x, cursor_text_y, 0);
         }
 
-        platform_msg(&running);
+        platform_msg();
         platform_swap_buffers(&platform);
     }
     platform_hide_window(&platform);
 
-    for (uint8_t i = 0; i < editor->files_opened; i++)
+    for (uint8_t i = 0; i < editor->files_opened; i++) {
         file_close(i);
+    }
     multithreading_destruct();
     font_destruct();
     editor_destruct();

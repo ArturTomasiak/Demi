@@ -44,7 +44,7 @@ void font_init(int32_t uniform_limit, _Bool gl46) {
 
     font->character = calloc(font->range[font->texture_count - 1][1] + 1, sizeof(Character));
     if (!font->character) {
-        fatal_error(u"memory allocation failed");
+        fatal_error(u"memory allocation failed\nfont.c");
         return;
     }
 
@@ -144,7 +144,7 @@ void font_rebuild(uint16_t new_font_size, float dpi_scale) {
 
         uint8_t *empty = calloc(font->size * font->size * processed_chars * 3, sizeof(uint8_t));
         if (!empty) {
-            fatal_error(u"memory allocation failed");
+            fatal_error(u"memory allocation failed\nfont.c");
             return;
         }
 
@@ -179,7 +179,7 @@ void font_rebuild(uint16_t new_font_size, float dpi_scale) {
             
             uint8_t* rgb_buffer = malloc(lcd_width * glyph->bitmap.rows * 3);
             if (!rgb_buffer) {
-                fatal_error(u"memory allocation failed");
+                fatal_error(u"memory allocation failed\nfont.c");
                 continue;
             }
 

@@ -7,13 +7,14 @@
 // window.c //
 //////////////
 
-void platform_msg(_Bool* running);
+void platform_msg();
 void platform_swap_buffers(Platform* restrict platform);
 void platform_destruct(Platform* restrict platform);
 _Bool platform_init(Platform* restrict platform, const char16_t* app_name);
 void platform_show_window(Platform* restrict platform);
 void platform_hide_window(Platform* restrict platform);
 void platform_sleep(uint32_t millis);
+void platform_vsync(_Bool on);
 
 ////////////
 // file.c //

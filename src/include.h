@@ -43,11 +43,12 @@
 
 #define FLAGS_GL46                    0b1
 #define FLAGS_MINIMIZED               0b10
-#define FLAGS_VSYNC_OFF               0b100
-#define FLAGS_SETTINGS_OPEN           0b1000
-#define FLAGS_RENGER_GUI_UPDATE       0b10000
-#define FLAGS_ADJUST_CAMERA_TO_CURSOR 0b100000
-#define FLAGS_FONT_RESIZED            0b1000000
+#define FLAGS_RUNNING                 0b100
+#define FLAGS_FONT_RESIZED            0b1000
+#define UNUSED                        0b10000
+#define FLAGS_SETTINGS_OPEN           0b100000
+#define FLAGS_RENGER_GUI_UPDATE       0b1000000
+#define FLAGS_ADJUST_CAMERA_TO_CURSOR 0b10000000
 
 //////////////
 // typedefs //
@@ -107,12 +108,27 @@ typedef enum {
 } Encoding;
 
 typedef struct {
+    _Bool rem_ch;
+    char16_t  ch;
+    char16_t* str;
+    uint64_t  pos;
+    uint64_t  len;
+} StringHistory;
+
+typedef struct {
     char16_t* buffer;
     int32_t*  color_map;
     uint64_t  length;
     uint64_t  allocated_memory;
     uint64_t  position;
     uint64_t  last_change[2];
+
+    StringHistory* undo;
+    uint64_t       undo_len;
+    uint64_t       undo_alloc;
+    StringHistory* redo;
+    uint64_t       redo_len;
+    uint64_t       redo_alloc;
 } StringBuffer;
 
 typedef struct {
@@ -125,7 +141,7 @@ typedef struct {
     float camera_x; 
     float camera_y;
 
-    StringBuffer string;
+    StringBuffer  string;
 } DemiFile;
 
 typedef struct {
@@ -148,7 +164,7 @@ typedef struct {
 typedef struct {
     float      dpi_scale;
     float      scroll_speed;
-    uint8_t    flags;
+    uint16_t    flags;
     uint8_t    files_opened;
     uint8_t    current_file;
     uint32_t   dpi;

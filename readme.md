@@ -6,6 +6,7 @@ A new (incomplete) GUI text edditor written in C.
 ## Table of Contents
 
 - [credits](#credits)
+- [shortcuts](#shortcuts)
 - [project structure](#project-structure)
 - [windows compilation ](#windows-compilation )
 
@@ -14,6 +15,17 @@ A new (incomplete) GUI text edditor written in C.
 - [hack font](https://sourcefoundry.org/hack/)
 - freetype2
 - glad2
+
+## shortcuts
+
+| shortcut | description |
+|----------|-------------|
+| ctrl+s   | save file   |
+| ctrl+v   | paste       |
+| ctrl+z   | undo        |
+| ctrl+y   | redo        |
+| ctrl+key up | go to the top of the file |
+| ctrl+key down | go to the bottom of the file |
 
 ## project structure
 

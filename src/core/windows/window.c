@@ -110,12 +110,22 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                     }
                 break;
                 case 'S':
-                    if (GetKeyState(VK_CONTROL) & 0x8000) {
+                    if (GetKeyState(VK_CONTROL) & 0x8000)
                         file_save(editor->current_file);
-                    }
+                break;
+                case 'Z':
+                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                        editor_undo();
+                break;
+                case 'Y':
+                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                        editor_redo();
                 break;
                 case VK_UP:
-                    editor_up();
+                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                        editor_jump_top();
+                    else
+                        editor_up();
                 break;
                 case VK_LEFT:
                     editor_left();
@@ -124,7 +134,10 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                     editor_right();
                 break;
                 case VK_DOWN:
-                    editor_down();
+                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                        editor_jump_bottom();
+                    else
+                        editor_down();
                 break;
             }
         break;
@@ -132,11 +145,16 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
     return DefWindowProc(hwnd, msg, w_param, l_param);
 }
 
-void platform_msg(_Bool* running) {
+void platform_msg() {
     static MSG msg;
+
+    MsgWaitForMultipleObjectsEx(0, NULL, INFINITE, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-        if (msg.message == WM_QUIT)
-            *running = 0;
+        if (msg.message == WM_QUIT) {
+            editor->flags &= ~FLAGS_RUNNING;
+            return;
+        }
         else {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -150,6 +168,12 @@ void platform_swap_buffers(Platform* restrict platform) {
 }
 
 void platform_destruct(Platform* restrict platform) {
+    Windows* win = platform->window_data;
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(win->hglrc);
+    ReleaseDC(win->hwnd, win->hdc);
+    DestroyWindow(win->hwnd);
+    UnregisterClass(win->wc.lpszClassName, win->hinstance);
     free(platform->window_data);
 }
 
@@ -190,13 +214,6 @@ _Bool platform_init(Platform* restrict platform, const char16_t* app_name) {
         DestroyWindow(win->hwnd);
         return 0;
     }
-
-    if (wglSwapIntervalEXT)
-        wglSwapIntervalEXT(1);
-    #ifdef demidebug
-    else 
-        printf("%s\n", "vsync not supported");
-    #endif
 
     editor->dpi = GetDpiForWindow(win->hwnd);
 
@@ -344,6 +361,13 @@ static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwn
 
 extern inline void platform_sleep(uint32_t millis) {
     Sleep(millis);
+}
+
+extern inline void platform_vsync(_Bool on) {
+    if (wglSwapIntervalEXT)
+        wglSwapIntervalEXT(on);
+    else
+        error(u"vsync not available", u"error");
 }
 
 #endif

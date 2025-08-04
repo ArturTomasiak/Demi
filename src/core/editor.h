@@ -17,6 +17,10 @@ void editor_tab();
 void editor_enter();
 void editor_input(char16_t ch);
 void editor_paste(char16_t* str);
+void editor_undo();
+void editor_redo();
+void editor_jump_top();
+void editor_jump_bottom();
 void editor_mouse_wheel(int32_t delta);
 void editor_left_click(float x, float y);
 

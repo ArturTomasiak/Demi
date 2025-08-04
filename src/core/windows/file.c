@@ -26,7 +26,7 @@ static void set_file_path(DemiFile* restrict file, const char16_t* path) {
     uint32_t path_len = u_strlen(path);
     file->path = realloc(file->path, (path_len + 1) * sizeof(char16_t));
     if (!file->path) {
-        fatal_error(u"memory allocation failed");
+        fatal_error(u"memory allocation failed\nfile.c");
         return;
     }
     memcpy(file->path, path, path_len * sizeof(char16_t));
@@ -42,7 +42,7 @@ static void set_file_path(DemiFile* restrict file, const char16_t* path) {
         name_len = 10;
     file->file_name = realloc(file->file_name, (name_len + 1) * sizeof(char16_t));
     if (!file->file_name) {
-        fatal_error(u"memory allocation failed");
+        fatal_error(u"memory allocation failed\nfile.c");
         return;
     }
     memcpy(file->file_name, path + pos, name_len * sizeof(char16_t));
@@ -93,7 +93,7 @@ void file_open(const char16_t* file_path) {
         }
         out = malloc((strlen + 1) * sizeof(char16_t));
         if (!out) {
-            error(u"memory allocation failed", u"error");  
+            error(u"memory allocation failed\nfile.c", u"error");  
             return;
         }
         MultiByteToWideChar(CP_UTF8, 0, raw_data, len, out, strlen);
@@ -107,7 +107,7 @@ void file_open(const char16_t* file_path) {
         strlen = len / 2;
         out = malloc((strlen + 1) * sizeof(char16_t));
         if (!out) {
-            error(u"memory allocation failed", u"error");  
+            error(u"memory allocation failed\nfile.c", u"error");  
             return;
         }
         memcpy(out, cpy, len);
@@ -124,6 +124,7 @@ void file_open(const char16_t* file_path) {
     editor->files = realloc(editor->files, editor->files_opened * sizeof(DemiFile));
     DemiFile* current = &editor->files[editor->current_file];
     memset(current, 0, sizeof(DemiFile));
+    memset(&current->string, 0, sizeof(StringBuffer));
     current->encoding = encoding;
 
     buffer_init_str(&current->string, strlen, out);
