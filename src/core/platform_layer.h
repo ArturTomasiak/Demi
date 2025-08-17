@@ -2,6 +2,7 @@
 
 #include "../include.h"
 #include "editor.h"
+#include "demifile.h"
 
 //////////////
 // window.c //
@@ -15,6 +16,7 @@ void platform_show_window(Platform* restrict platform);
 void platform_hide_window(Platform* restrict platform);
 void platform_sleep(uint32_t millis);
 void platform_vsync(_Bool on);
+int64_t platform_mouse_y(void* handle);
 
 ////////////
 // file.c //

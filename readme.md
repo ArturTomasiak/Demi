@@ -1,14 +1,15 @@
 # Demi
 A new (incomplete) GUI text edditor written in C.
 
-![screenshot](screenshot.png)
+![screenshot](ss.png)
 
 ## Table of Contents
 
 - [credits](#credits)
 - [shortcuts](#shortcuts)
 - [project structure](#project-structure)
-- [windows compilation ](#windows-compilation )
+- [windows compilation ](#windows-compilation)
+- [notes](#notes)
 
 ## credits
 - magic_hat icon by [mingcute](https://www.mingcute.com/)
@@ -20,12 +21,15 @@ A new (incomplete) GUI text edditor written in C.
 
 | shortcut | description |
 |----------|-------------|
+| ctrl+f   | new file    |
+| ctrl+o   | open file   |
 | ctrl+s   | save file   |
 | ctrl+v   | paste       |
 | ctrl+z   | undo        |
 | ctrl+y   | redo        |
-| ctrl+key up | go to the top of the file |
-| ctrl+key down | go to the bottom of the file |
+| ctrl+scroll    | horizontal scroll            |
+| ctrl+key up    | go to the top of the file    |
+| ctrl+key down  | go to the bottom of the file |
 
 ## project structure
 
@@ -34,6 +38,8 @@ include.h        # defines, declarations, includes, typedefs and error.c
 main.c           # declaration definitions, main, main loop, multithreaded helper func
 main_helper.c    # parts of prepare from main.c abstracted into functions for readability
 core/
+├── demifile.c
+├── demifile.h
 ├── editor.c
 ├── editor.h
 ├── font.c
@@ -52,17 +58,30 @@ core/
 ├── platform_layer.h
 ├── windows/
     ├── error.c  # message boxes and gl errors
-    ├── file.c   # file opening, saving and closing
+    ├── file.c   # platform specific file logic
     ├── window.c # window creating and managing
 ```
 
 ## windows compilation 
 requirements:
-- msvc c compiler
+- clang-cl
 - glad2
 - freetype2
 
-my building setup (following it is optional):
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=clang-cl ^
+    -DCMAKE_BUILD_TYPE=Release ^
+    -DGLAD_SRC="C:/libraries/glad/src/gl.c;C:/libraries/glad/src/wgl.c" ^
+    -DGLAD_INCLUDE="C:/libraries/glad/include" ^
+    -DFREETYPE_INCLUDE="C:/libraries/freetype/include/freetype2" ^
+    -DFREETYPE_LIB="C:/libraries/freetype/lib/freetype.lib" 
+
+ninja -C build -j 4
+```
+
+where CMakeLists always create both release and debug versions of demi; CMAKE_BUILD_TYPE affects flags for both.
+
+### dependency installation
 
 [LLVM clang-cl](https://clang.llvm.org/), which requires visual studio or it's build tools, more specifically:
 - C++ development 
@@ -104,3 +123,17 @@ cmake C:\Users\frogger\Downloads\freetype-master -G Ninja ^
 Ninja
 Ninja install
 ```
+
+## version history
+
+`0.6` -> 
+- compilation change from bat files to cmake
+- rewriting color_map.c for lower ram usage
+- adjusted color pallete
+- horizontal scrolling
+- new shorcuts
+
+## notes
+
+- both GetKeyState and GetAsyncKeyState can freeze with false positives regarding alt until next key input, which I consistently replicated using alt + scroll wheel (win32)
+- wchar_t and char16_t can be used interchangeably on windows

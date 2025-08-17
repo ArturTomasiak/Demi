@@ -1,0 +1,4 @@
+C:/Users/frogger/Documents/C/DemiEditor/build/CMakeFiles/Demi.dir
+C:/Users/frogger/Documents/C/DemiEditor/build/CMakeFiles/Debug.dir
+C:/Users/frogger/Documents/C/DemiEditor/build/CMakeFiles/edit_cache.dir
+C:/Users/frogger/Documents/C/DemiEditor/build/CMakeFiles/rebuild_cache.dir

@@ -45,7 +45,7 @@
 #define FLAGS_MINIMIZED               0b10
 #define FLAGS_RUNNING                 0b100
 #define FLAGS_FONT_RESIZED            0b1000
-#define UNUSED                        0b10000
+#define FLAGS_SCAN_COMMENTS           0b10000
 #define FLAGS_SETTINGS_OPEN           0b100000
 #define FLAGS_RENGER_GUI_UPDATE       0b1000000
 #define FLAGS_ADJUST_CAMERA_TO_CURSOR 0b10000000
@@ -150,6 +150,8 @@ typedef struct {
     VBO vbo[2];
     Size size;
     uint32_t rectangle_indices[6];
+
+    float camera_x; 
 } GUI;
 
 typedef struct {
@@ -206,6 +208,17 @@ typedef struct {
     FT_Face ft_face;
 } DemiFont;
 
+typedef struct {
+    char16_t* str;
+    uint8_t   color;
+} KeywordMapEntry;
+
+typedef struct {
+    KeywordMapEntry* map;
+    KeywordMapEntry* last_match;
+    uint16_t len;
+} KeywordMap;
+
 #pragma pack(pop)
 
 /////////////
@@ -223,11 +236,11 @@ void check_gl_errors();
 // declarations //
 //////////////////
 
-extern const float light_violet[3];
-extern const float violet[3];
-extern const float orange[3];
+extern const float cold_purple[3];
+extern const float cold_orange[3];
+extern const float white[3];
 extern const float gray[3];
-extern const float dark[3];
+
 extern uint8_t text_start_x;
 extern const uint8_t gui_margin_y;
 

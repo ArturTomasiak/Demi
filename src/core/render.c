@@ -17,7 +17,7 @@ void render_update_nl_height(float new_height) {
 }
 
 extern inline void render_gui_projection(int32_t width, int32_t height) {
-    math_orthographic_f4x4(gui_projection, 0, width, 0, height, -1.0f, 1.0f);
+    math_orthographic_f4x4(gui_projection, gui->camera_x, gui->camera_x + width, 0, height, -1.0f, 1.0f);
 }
 
 extern inline void render_content_projection(int32_t width, int32_t height, DemiFile* restrict file) {
@@ -139,7 +139,7 @@ void render_gui() {
         
         shader_uniform_mat4(&gui->shader, "mvp", mvp, 1);
         if (i == editor->current_file) 
-            shader_uniform_float_4(&gui->shader, "color", light_violet[0], light_violet[1], light_violet[2], 1.0f);
+            shader_uniform_float_4(&gui->shader, "color", cold_purple[0], cold_purple[1], cold_purple[2], 1.0f);
         else
             shader_uniform_float_4(&gui->shader, "color", gray[0], gray[1], gray[2], 1.0f);
         
@@ -157,7 +157,7 @@ void render_gui() {
         math_multiply_f4x4(mvp, gui_projection, model);
         
         shader_uniform_mat4(&gui->shader, "mvp", mvp, 1);
-        shader_uniform_float_4(&gui->shader, "color", 1.0f, 1.0f, 1.0f, 1.0f); 
+        shader_uniform_float_4(&gui->shader, "color", white[0], white[1], white[2], 1.0f); 
         
         glLineWidth(2.0f * editor->dpi_scale);
         glDrawArrays(GL_LINES, 0, 2);

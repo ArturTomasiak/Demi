@@ -95,10 +95,10 @@ void font_init(int32_t uniform_limit, _Bool gl46) {
     vao_add_buffer(&layout, &font->vao);
     vao_layout_destruct(&layout);
 
-    shader_uniform_float_3(&font->shader, "color[0]", 1.0f, 1.0f, 1.0f);
-    shader_uniform_float_3(&font->shader, "color[1]", gray[0], gray[1], gray[2]);         // comments
-    shader_uniform_float_3(&font->shader, "color[2]", orange[0], orange[1], orange[2]);   // variables
-    shader_uniform_float_3(&font->shader, "color[3]", violet[0], violet[1], violet[2]);   // keywords
+    shader_uniform_float_3(&font->shader, "color[0]", white[0], white[1], white[2]);
+    shader_uniform_float_3(&font->shader, "color[1]", gray[0], gray[1], gray[2]); 
+    shader_uniform_float_3(&font->shader, "color[2]", cold_orange[0], cold_orange[1], cold_orange[2]); 
+    shader_uniform_float_3(&font->shader, "color[3]", cold_purple[0], cold_purple[1], cold_purple[2]); 
 
     glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &font->max_anisotropy);
 }
@@ -219,8 +219,12 @@ void font_destruct() {
     shader_destruct(&font->shader);
     vao_destruct(&font->vao);
     vbo_destruct(&font->vbo);
-    free(font->character);
-    free(font->transforms);
-    free(font->letter_map);
-    free(font->texture_map);
+    if (font->character)
+        free(font->character);
+    if (font->transforms)
+        free(font->transforms);
+    if (font->letter_map)
+        free(font->letter_map);
+    if (font->texture_map)
+        free(font->texture_map);
 }

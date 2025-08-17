@@ -163,7 +163,7 @@ void vbo_init(VBO* restrict vbo, const void* data, uint32_t size) {
     glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
 }
 
-void vbo_destruct(VBO* restrict vbo) {
+extern inline void vbo_destruct(VBO* restrict vbo) {
     glDeleteBuffers(1, &vbo->renderer_id);
     vbo->renderer_id = 0;
 }
@@ -184,7 +184,7 @@ extern inline void vao_init(VAO* restrict vao) {
     glGenVertexArrays(1, &vao->renderer_id);
 }
 
-void vao_destruct(VAO* restrict vao) {
+extern inline void vao_destruct(VAO* restrict vao) {
     glDeleteVertexArrays(1, &vao->renderer_id);
     vao->renderer_id = 0;
 }

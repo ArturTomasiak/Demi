@@ -22,33 +22,6 @@ static Encoding get_encoding(const char16_t* file_path, FILE* file) {
     return UTF8;
 }
 
-static void set_file_path(DemiFile* restrict file, const char16_t* path) {
-    uint32_t path_len = u_strlen(path);
-    file->path = realloc(file->path, (path_len + 1) * sizeof(char16_t));
-    if (!file->path) {
-        fatal_error(u"memory allocation failed\nfile.c");
-        return;
-    }
-    memcpy(file->path, path, path_len * sizeof(char16_t));
-    file->path[path_len] = u'\0';
-    uint32_t pos = path_len;
-    while (path[pos - 1] != u'/' && path[pos - 1] != u'\\') {
-        pos--;
-        if (pos - 1 == 0)
-            break;
-    }
-    uint32_t name_len = path_len - pos;
-    if (name_len > 10)
-        name_len = 10;
-    file->file_name = realloc(file->file_name, (name_len + 1) * sizeof(char16_t));
-    if (!file->file_name) {
-        fatal_error(u"memory allocation failed\nfile.c");
-        return;
-    }
-    memcpy(file->file_name, path + pos, name_len * sizeof(char16_t));
-    file->file_name[name_len] = u'\0';
-}
-
 void file_open_explorer() {
     char16_t file_path[MAX_PATH] = u"";
     OPENFILENAME explorer = {0};
@@ -71,6 +44,7 @@ void file_open(const char16_t* file_path) {
     Encoding encoding = get_encoding(file_path, raw);
     if (encoding != UTF8 && encoding != UTF16LE && encoding != UTF16BE) {
         error(u"unsuported file encoding", u"error");
+        fclose(raw);
         return;
     }
 
@@ -119,19 +93,7 @@ void file_open(const char16_t* file_path) {
     }
     free(raw_data);
 
-    editor->current_file = editor->files_opened;
-    editor->files_opened++;
-    editor->files = realloc(editor->files, editor->files_opened * sizeof(DemiFile));
-    DemiFile* current = &editor->files[editor->current_file];
-    memset(current, 0, sizeof(DemiFile));
-    memset(&current->string, 0, sizeof(StringBuffer));
-    current->encoding = encoding;
-
-    buffer_init_str(&current->string, strlen, out);
-    free(out);
-
-    set_file_path(current, file_path);
-    render_content_projection(editor->width, editor->height, &editor->files[editor->current_file]);
+    file_create(out, strlen, file_path, encoding);
 }
 
 void file_close(uint8_t file_index) {

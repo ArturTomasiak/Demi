@@ -4,11 +4,13 @@
 #include "core/gui.h"
 #include "main_helper.c"
 
-const float light_violet[3] = {149.0f / 255, 106.0f / 255, 1.0f};
-const float violet[3]       = {149.0f / 255, 106.0f / 255, 1.0f};
-const float orange[3]       = {240.0f / 255, 128.0f / 255, 0.0f};
-const float gray[3]         = {129.0f / 255, 133.0f / 255, 137.0f / 255};
-const float dark[3]         = {19.0f / 255, 19.0f / 255, 19.0f / 255};
+const float cold_purple[3]   = {149.0f / 255, 106.0f / 255, 1.0f};
+const float cold_orange[3]   = {1.0f, 127.0f / 255, 80.0f / 255};
+const float white[3]         = {236.0f / 255, 239.0f / 255, 244.0f / 255};
+const float gray[3]          = {129.0f / 255, 133.0f / 255, 137.0f / 255};
+
+static const float background[3] = {19.0f / 255, 19.0f / 255, 19.0f / 255};
+
 uint8_t text_start_x = 10;
 const uint8_t gui_margin_y = 5;
 GUI*      restrict gui;
@@ -23,9 +25,15 @@ static DWORD  thread_id;
 DWORD WINAPI prepare(void* arg) {
     while (1) {
         WaitForSingleObject(run_prepare, INFINITE);
-    if (FLAGS_RUNNING & ~editor->flags) break;
+
+        if (FLAGS_RUNNING & ~editor->flags) break;
+
         setup_lines(editor);
-        color_map_comment(&editor->files[editor->current_file].string);
+        if (editor->flags & FLAGS_SCAN_COMMENTS) {
+            color_map_comment(&editor->files[editor->current_file].string);
+            editor->flags &= ~FLAGS_SCAN_COMMENTS;
+        }
+
         SetEvent(prepare_complete);
     }
     return 0;
@@ -50,10 +58,10 @@ int32_t CALLBACK WinMain(
     int32_t nCmdShow 
 ) {
 #endif
-    GUI      gui_original      = {0};
-    Editor   editor_original   = {0};
-    DemiFont font_original     = {0};
-    KeywordMap keyword_map     = {0};
+    GUI        gui_original      = {0};
+    Editor     editor_original   = {0};
+    DemiFont   font_original     = {0};
+    KeywordMap keyword_map       = {0};
     gui =    &gui_original;
     editor = &editor_original;
     font   = &font_original;
@@ -93,7 +101,7 @@ int32_t CALLBACK WinMain(
             editor->flags &= ~FLAGS_FONT_RESIZED;
         }
             
-        glClearColor(dark[0], dark[1], dark[2], 1.0f);
+        glClearColor(background[0], background[1], background[2], 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         #ifdef demidebug

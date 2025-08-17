@@ -4,6 +4,7 @@
 #include "render.h"
 #include "string.h"
 #include "font.h"
+#include "demifile.h"
 #include "gui.h"
 
 void editor_init();
@@ -21,7 +22,7 @@ void editor_undo();
 void editor_redo();
 void editor_jump_top();
 void editor_jump_bottom();
-void editor_mouse_wheel(int32_t delta);
+void editor_mouse_wheel(int32_t delta, _Bool horizontal, void* handle);
 void editor_left_click(float x, float y);
 
 void editor_up();

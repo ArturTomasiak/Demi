@@ -3,26 +3,10 @@
 void editor_init() {
     editor->flags |= FLAGS_RUNNING;
     glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &editor->uniform_limit);
-
     editor->dpi_scale = (float)editor->dpi / 96.0f;
-
     editor->scroll_speed = 1.1;
 
-    editor->files_opened = 1;
-    editor->files = malloc(sizeof(DemiFile));
-    if (!editor->files) {
-        fatal_error(u"memory allocation failed\neditor.c");
-        return;
-    }
-    DemiFile* file = &editor->files[0];
-    memset(file, 0, sizeof(DemiFile));
-    memset(&file->string, 0, sizeof(StringBuffer));
-    char16_t* unnamed = u"unnamed";
-    uint8_t len = u_strlen(unnamed);
-    file->file_name = malloc((len + 1) * sizeof(char16_t));
-    file->file_name[len] = u'\0';
-    memcpy(file->file_name, unnamed, len * sizeof(char16_t));
-    buffer_init(&file->string);
+    file_create_empty();
 }
 
 void editor_resize() {
@@ -37,10 +21,15 @@ void editor_dpi_change(uint32_t dpi) {
 }
 
 void editor_destruct() {
+    if (!editor->files)
+        return;
     for (uint8_t i = 0; i < editor->files_opened; i++) {
-        buffer_destruct(&editor->files[i].string);
-        free(editor->files[i].file_name);
-        free(editor->files[i].path);
+        DemiFile* file = &editor->files[i];
+        buffer_destruct(&file->string);
+        if (file->file_name)
+            free(file->file_name);
+        if (file->path)
+            free(file->path);
     }
     free(editor->files);
 }
@@ -67,6 +56,8 @@ void editor_input(char16_t ch) {
     DemiFile* file = &editor->files[editor->current_file];
     buffer_add_char(&file->string, ch, 0);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+    if (ch == u'/' || ch == u'*')
+        editor->flags |= FLAGS_SCAN_COMMENTS;
 }
 
 void editor_paste(char16_t* str) {
@@ -99,12 +90,30 @@ void editor_jump_bottom() {
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_mouse_wheel(int32_t delta) {
+void editor_mouse_wheel(int32_t delta, _Bool horizontal, void* handle) {
     delta *= editor->scroll_speed;
     DemiFile* file = &editor->files[editor->current_file];
-    file->camera_y += delta;
-    if (file->camera_y > 0)
-        file->camera_y = 0;
+    if (horizontal) {
+        delta = delta >> 1;
+        uint64_t y = editor->height - platform_mouse_y(handle);
+        if (y > editor->height - gui->size.y) {
+            gui->camera_x += delta;
+            if (gui->camera_x < 0)
+                gui->camera_x = 0;
+            render_gui_projection(editor->width, editor->height);
+            return;
+        }
+        else {
+            file->camera_x += delta;
+            if (file->camera_x < 0)
+                file->camera_x = 0;
+        }
+    }
+    else {
+        file->camera_y += delta;
+        if (file->camera_y > 0)
+            file->camera_y = 0;
+    }
     render_content_projection(editor->width, editor->height, file);
 }
 
@@ -127,6 +136,9 @@ void editor_left_click(float x, float y) {
             }
             current_x += size_x;
         }
+    }
+    else {
+
     }
 }
 

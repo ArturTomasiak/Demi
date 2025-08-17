@@ -5,9 +5,6 @@
 #include <dwmapi.h>
 #include <glad/wgl.h>
 
-// I am aware that win32's UNICODE mode expects wchar_t strings, 
-// it can be used interchangably with char16_t on windows
-
 typedef struct {
     HINSTANCE hinstance;
     WNDCLASSEX wc;
@@ -68,7 +65,7 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
             }
         break;
         case WM_MOUSEWHEEL:
-            editor_mouse_wheel((short)HIWORD(w_param));
+            editor_mouse_wheel((short)HIWORD(w_param), (GetAsyncKeyState(VK_CONTROL) & 0x8000), &hwnd);
         break;
         case WM_LBUTTONUP:
             editor_left_click((float)(short)LOWORD(l_param), (float)(short)HIWORD(l_param)); 
@@ -93,7 +90,7 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
         case WM_KEYDOWN:
             switch(w_param) {
                 case 'V':
-                    if (GetKeyState(VK_CONTROL) & 0x8000) {
+                    if ((GetKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000)) {
                         if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
                             if (OpenClipboard(hwnd)) {
                                 HANDLE clipboard = GetClipboardData(CF_UNICODETEXT);
@@ -109,20 +106,28 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                         }
                     }
                 break;
+                case 'F':
+                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                        file_create_empty();
+                break;
+                case 'O':
+                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                        file_open_explorer();
+                break;
                 case 'S':
-                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
                         file_save(editor->current_file);
                 break;
                 case 'Z':
-                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
                         editor_undo();
                 break;
                 case 'Y':
-                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
                         editor_redo();
                 break;
                 case VK_UP:
-                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000))
                         editor_jump_top();
                     else
                         editor_up();
@@ -134,7 +139,7 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
                     editor_right();
                 break;
                 case VK_DOWN:
-                    if (GetKeyState(VK_CONTROL) & 0x8000)
+                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000))
                         editor_jump_bottom();
                     else
                         editor_down();
@@ -148,7 +153,8 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
 void platform_msg() {
     static MSG msg;
 
-    MsgWaitForMultipleObjectsEx(0, NULL, INFINITE, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+    if (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
+        MsgWaitForMultipleObjectsEx(0, NULL, INFINITE, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
 
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
@@ -368,6 +374,14 @@ extern inline void platform_vsync(_Bool on) {
         wglSwapIntervalEXT(on);
     else
         error(u"vsync not available", u"error");
+}
+
+int64_t platform_mouse_y(void* handle) {
+    HWND* hwnd = (HWND*) handle;
+    POINT cords = {0};
+    GetCursorPos(&cords);
+    ScreenToClient(*hwnd, &cords);
+    return cords.y;
 }
 
 #endif

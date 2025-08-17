@@ -21,17 +21,11 @@ _Bool is_printable(char16_t ch);
 _Bool is_word_boundary(char16_t ch);
 
 // color_map.c
-typedef struct {
-    char16_t*** map;
-    uint16_t*   alloc_map;
-    uint8_t**   color_map;
-    uint8_t     last_color;
-    uint8_t     last_len; 
-    uint8_t     map_len;
-} KeywordMap;
 
 void color_map_update(StringBuffer* restrict string);
 void color_map_comment(StringBuffer* restrict string);
+void keyword_map_add_arr(char16_t** arr, uint8_t color_val);
+void keyword_map_add(char16_t* str, uint8_t color);
 void keyword_map_init(KeywordMap* restrict map);
 void keyword_map_destruct();
 _Bool is_keyword(char16_t* word);
