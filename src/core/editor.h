@@ -29,4 +29,10 @@ void editor_up();
 void editor_left();
 void editor_right();
 void editor_down();
+
+void editor_select_all();
+void editor_key_select(_Bool right);
+void editor_delete_selected(StringBuffer* string);
+
+void editor_update_tab(uint8_t len);
 void editor_camera_to_cursor(float x, float y, float advance, float nl_height, float min_x);

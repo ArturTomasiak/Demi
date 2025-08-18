@@ -1,7 +1,7 @@
 # Demi
 A new (incomplete) GUI text edditor written in C.
 
-![screenshot](ss.png)
+![screenshot](screenshot.png)
 
 ## Table of Contents
 
@@ -13,23 +13,28 @@ A new (incomplete) GUI text edditor written in C.
 
 ## credits
 - magic_hat icon by [mingcute](https://www.mingcute.com/)
-- [hack font](https://sourcefoundry.org/hack/)
+- jetbrains mono font
 - freetype2
 - glad2
 
 ## shortcuts
 
-| shortcut | description |
-|----------|-------------|
-| ctrl+f   | new file    |
-| ctrl+o   | open file   |
-| ctrl+s   | save file   |
-| ctrl+v   | paste       |
-| ctrl+z   | undo        |
-| ctrl+y   | redo        |
-| ctrl+scroll    | horizontal scroll            |
-| ctrl+key up    | go to the top of the file    |
-| ctrl+key down  | go to the bottom of the file |
+| shortcut | description     |
+|----------|-----------------|
+| ctrl+f   | new file        |
+| ctrl+o   | open file       |
+| ctrl+s   | save file       |
+| ctrl+x   | copy and delete |
+| ctrl+c   | copy            |
+| ctrl+v   | paste           |
+| ctrl+z   | undo            |
+| ctrl+y   | redo            |
+| ctrl+a   | select all      |
+| ctrl+scroll     | horizontal scroll            |
+| ctrl+key up     | go to the top of the file    |
+| ctrl+key down   | go to the bottom of the file |
+| shift+key left  | select text to the left      |
+| shift+key right | select text to the right     |
 
 ## project structure
 
@@ -65,6 +70,7 @@ core/
 ## windows compilation 
 requirements:
 - clang-cl
+- ninja
 - glad2
 - freetype2
 
@@ -83,7 +89,7 @@ where CMakeLists always create both release and debug versions of demi; CMAKE_BU
 
 ### dependency installation
 
-[LLVM clang-cl](https://clang.llvm.org/), which requires visual studio or it's build tools, more specifically:
+[LLVM clang-cl](https://clang.llvm.org/), which may require visual studio or it's build tools, more specifically:
 - C++ development 
 - C++ Clang Compiler for Windows
 - MSBuild support for LLVM (clang-cli) toolset
@@ -110,15 +116,16 @@ build freetype from [source](https://gitlab.freedesktop.org/freetype/freetype)
 
 ```
 cmake C:\Users\frogger\Downloads\freetype-master -G Ninja ^
--DFT_DISABLE_HARFBUZZ=ON ^
--DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" ^
--DCMAKE_BUILD_TYPE=Release ^
--DBUILD_SHARED_LIBS=OFF ^
--DCMAKE_AR="llvm-lib.exe" ^
--DCMAKE_LINKER="lld-link.exe" ^
--DCMAKE_C_COMPILER=clang-cl ^
--DCMAKE_C_FLAGS="/MT /DNDEBUG /Ox /DFT_CONFIG_OPTION_AUTOHINT /DFT_CONFIG_OPTION_USE_LCD_FILTER /DFT_CONFIG_OPTION_SUBPIXEL_RENDERING /DFT_CONFIG_OPTION_INFINALITY_PATCHSET" ^
--DCMAKE_INSTALL_PREFIX=C:\libraries\freetype
+    -DCMAKE_BUILD_TYPE=Release ^
+    -DFT_DISABLE_HARFBUZZ=ON ^
+    -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded" ^
+    -DCMAKE_BUILD_TYPE=Release ^
+    -DBUILD_SHARED_LIBS=OFF ^
+    -DCMAKE_AR="llvm-lib.exe" ^
+    -DCMAKE_LINKER="lld-link.exe" ^
+    -DCMAKE_C_COMPILER=clang-cl ^
+    -DCMAKE_C_FLAGS="/MT /DNDEBUG /Ox /DFT_CONFIG_OPTION_AUTOHINT /DFT_CONFIG_OPTION_USE_LCD_FILTER /DFT_CONFIG_OPTION_SUBPIXEL_RENDERING /DFT_CONFIG_OPTION_INFINALITY_PATCHSET" ^
+    -DCMAKE_INSTALL_PREFIX=C:\libraries\freetype
 
 Ninja
 Ninja install
@@ -133,7 +140,22 @@ Ninja install
 - horizontal scrolling
 - new shorcuts
 
+'0.7' ->
+- select all (ctrl a)
+- move to jetbrains mono font
+- Demi continues the main loop only on input
+- selecting text, ctrl x, ctrl c, shift+left/right key
+- bugfix: texture_count was incorrect for GPUs with texture limit under 2000
+- bugfix: pushing a string into undo/redo does not crash the program any longer
+- bugfix: demi no longer leaves behind a frozen background process on WM_CLOSE and WM_DESTROY
+
+plans for '0.8' ->
+- settings menu
+- linux support
+- finish mouse support
+
 ## notes
 
 - both GetKeyState and GetAsyncKeyState can freeze with false positives regarding alt until next key input, which I consistently replicated using alt + scroll wheel (win32)
 - wchar_t and char16_t can be used interchangeably on windows
+- WM_CLOSE and WM_DESTROY may crash the application when followed by return DefWindowProc(hwnd, msg, w_param, l_param) instead of return 0

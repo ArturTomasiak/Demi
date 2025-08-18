@@ -17,11 +17,65 @@ static inline HGLRC create_temp_context(HDC hdc, HWND hwnd);
 static inline HGLRC create_context(HDC hdc, HWND hwnd, _Bool* gl_version_fallback);
 static inline _Bool create_window(WNDCLASSEX* wc, HINSTANCE hinstance, HWND* hwnd, const char16_t* app_name, int32_t width, int32_t height);
 
+static void paste(HWND hwnd) {
+    if (!IsClipboardFormatAvailable(CF_UNICODETEXT) || !OpenClipboard(hwnd)) {
+        error(u"failed to access clipboard", u"error");
+        return;
+    }
+
+    HANDLE clipboard = GetClipboardData(CF_UNICODETEXT);
+    if (clipboard) {
+        char16_t* text = GlobalLock(clipboard);
+        if (text) {
+            editor_paste(text);
+            GlobalUnlock(clipboard);
+        }
+    }
+    CloseClipboard();
+}
+
+static void copy(HWND hwnd) {
+    if (!IsClipboardFormatAvailable(CF_UNICODETEXT) || !OpenClipboard(hwnd)) {
+        error(u"failed to access clipboard", u"error");
+        return;
+    }
+
+    uint64_t to   = editor->selected[1];
+    uint64_t from = editor->selected[0];
+    uint64_t len  = to - from;
+
+    if (!len) return;
+    
+    char16_t buffer[len]; 
+    char16_t* src = editor->files[editor->current_file].string.buffer;
+    memcpy(buffer, src + from, len * sizeof(char16_t));
+
+    uint64_t size = (len + 1) * sizeof(char16_t);
+    EmptyClipboard();
+    HGLOBAL alloc = GlobalAlloc(GMEM_MOVEABLE, size);
+    if (!alloc) {
+        CloseClipboard();
+        error(u"global alloc failed", u"error");
+        return;
+    }
+    void* ptr = GlobalLock(alloc);
+    memcpy(ptr, buffer, size);
+    GlobalUnlock(alloc);
+    SetClipboardData(CF_UNICODETEXT, alloc);
+    CloseClipboard();
+}
+
+static void copy_and_delete(HWND hwnd) {
+    copy(hwnd);
+    editor_delete_selected(&editor->files[editor->current_file].string);
+}
+
 LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) { 
     switch(msg) {
+        case WM_DESTROY:
         case WM_CLOSE: 
             PostQuitMessage(0);
-        break;
+            return 0;
         case WM_DPICHANGED:
             editor_dpi_change(LOWORD(w_param));
         break;
@@ -89,54 +143,59 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
         break;
         case WM_KEYDOWN:
             switch(w_param) {
+                case 'A':
+                    if (GetKeyState(VK_CONTROL) & 0x8000 && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                        editor_select_all();
+                break;
                 case 'V':
-                    if ((GetKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000)) {
-                        if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
-                            if (OpenClipboard(hwnd)) {
-                                HANDLE clipboard = GetClipboardData(CF_UNICODETEXT);
-                                if (clipboard) {
-                                    char16_t* text = GlobalLock(clipboard);
-                                    if (text) {
-                                        editor_paste(text);
-                                        GlobalUnlock(clipboard);
-                                    }
-                                }
-                                CloseClipboard();
-                            }
-                        }
-                    }
+                    if (GetKeyState(VK_CONTROL) & 0x8000 && !(GetAsyncKeyState(VK_MENU) & 0x8000)) 
+                        paste(hwnd);
+                break;
+                case 'C':
+                    if (GetAsyncKeyState(VK_CONTROL) & 0x8000 && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                        copy(hwnd);
+                break;
+                case 'X':
+                    if (GetAsyncKeyState(VK_CONTROL) & 0x8000 && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                        copy_and_delete(hwnd);
                 break;
                 case 'F':
-                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                    if (GetAsyncKeyState(VK_CONTROL) & 0x8000 && !(GetAsyncKeyState(VK_MENU) & 0x8000))
                         file_create_empty();
                 break;
                 case 'O':
-                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                    if (GetAsyncKeyState(VK_CONTROL) & 0x8000 && !(GetAsyncKeyState(VK_MENU) & 0x8000))
                         file_open_explorer();
                 break;
                 case 'S':
-                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                    if (GetAsyncKeyState(VK_CONTROL) & 0x8000 && !(GetAsyncKeyState(VK_MENU) & 0x8000))
                         file_save(editor->current_file);
                 break;
                 case 'Z':
-                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                    if (GetAsyncKeyState(VK_CONTROL & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
                         editor_undo();
                 break;
                 case 'Y':
-                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && !(GetAsyncKeyState(VK_MENU) & 0x8000))
+                    if (GetAsyncKeyState(VK_CONTROL) & 0x8000 && !(GetAsyncKeyState(VK_MENU) & 0x8000))
                         editor_redo();
                 break;
                 case VK_UP:
-                    if ((GetAsyncKeyState(VK_CONTROL) & 0x8000))
+                    if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
                         editor_jump_top();
                     else
                         editor_up();
                 break;
                 case VK_LEFT:
-                    editor_left();
+                    if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                        editor_key_select(0);
+                    else
+                        editor_left();
                 break;
                 case VK_RIGHT:
-                    editor_right();
+                    if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+                        editor_key_select(1);
+                    else
+                        editor_right();
                 break;
                 case VK_DOWN:
                     if ((GetAsyncKeyState(VK_CONTROL) & 0x8000))
@@ -152,19 +211,14 @@ LRESULT CALLBACK process_message(HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_p
 
 void platform_msg() {
     static MSG msg;
-
-    if (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE))
-        MsgWaitForMultipleObjectsEx(0, NULL, INFINITE, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
-
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-        if (msg.message == WM_QUIT) {
-            editor->flags &= ~FLAGS_RUNNING;
-            return;
-        }
-        else {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
+    GetMessage(&msg, NULL, 0, 0);
+    if (msg.message == WM_QUIT) {
+        editor->flags &= ~FLAGS_RUNNING;
+        return;
+    }
+    else {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
 }
 

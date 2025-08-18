@@ -3,10 +3,10 @@
 void font_init(int32_t uniform_limit, _Bool gl46) {
     int32_t texture_arr_limit;
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &texture_arr_limit);
-    font->line_spacing = 1.3;
+    font->line_spacing = 1.6;
 
     if (texture_arr_limit < 256) {
-        fatal_error(u"gpu currently unsupported\n GL_MAX_ARRAY_TEXTURE_LAYERS < 256");
+        fatal_error(u"gpu currently unsupported");
         return;
     }
     else if (texture_arr_limit < 2000) {
@@ -20,26 +20,12 @@ void font_init(int32_t uniform_limit, _Bool gl46) {
         font->range[3][1] = 1150;
         font->range[4][0] = 1151;
         font->range[4][1] = 1300;
-        font->range[5][0] = 1301;
-        font->range[5][1] = 1418;
-        font->range[6][0] = 4300;
-        font->range[6][1] = 4351;
-        font->range[7][0] = 8194;
-        font->range[7][1] = 8300;
-        font->range[7][0] = 8301;
-        font->range[7][1] = 8487;
-        font->texture_count = 9;  // adjust DemiFont struct when changed
+        font->texture_count = 5;  // adjust DemiFont struct when changed
     }
     else {
         font->range[0][0] = 0;
-        font->range[0][1] = 539;
-        font->range[1][0] = 900;
-        font->range[1][1] = 1418;
-        font->range[2][0] = 4300;
-        font->range[2][1] = 4351;
-        font->range[3][0] = 8194;
-        font->range[3][1] = 8487;
-        font->texture_count = 4;
+        font->range[0][1] = 1300;
+        font->texture_count = 1;
     }
 
     font->character = calloc(font->range[font->texture_count - 1][1] + 1, sizeof(Character));
@@ -69,8 +55,8 @@ void font_init(int32_t uniform_limit, _Bool gl46) {
             #endif
         }
     }
-    if (FT_New_Face(font->ft_lib, "../resources/fonts/Hack-Regular.ttf", 0, &font->ft_face)) {
-        fatal_error(u"failed to create face using /resources/fonts/Hack-Regular.ttf");
+    if (FT_New_Face(font->ft_lib, "../resources/fonts/JetBrainsMonoNL-Regular.ttf", 0, &font->ft_face)) {
+        fatal_error(u"failed to create face using /resources/fonts/JetBrainsMonoNL-Regular.ttf");
         return;
     }
     if (FT_Select_Charmap(font->ft_face, FT_ENCODING_UNICODE)) {
@@ -99,6 +85,7 @@ void font_init(int32_t uniform_limit, _Bool gl46) {
     shader_uniform_float_3(&font->shader, "color[1]", gray[0], gray[1], gray[2]); 
     shader_uniform_float_3(&font->shader, "color[2]", cold_orange[0], cold_orange[1], cold_orange[2]); 
     shader_uniform_float_3(&font->shader, "color[3]", cold_purple[0], cold_purple[1], cold_purple[2]); 
+    shader_uniform_float_3(&font->shader, "color[4]", 163.0f / 255, 190.0f / 255, 140.0f / 255); // selected
 
     glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &font->max_anisotropy);
 }

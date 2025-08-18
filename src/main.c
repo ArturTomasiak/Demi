@@ -13,9 +13,10 @@ static const float background[3] = {19.0f / 255, 19.0f / 255, 19.0f / 255};
 
 uint8_t text_start_x = 10;
 const uint8_t gui_margin_y = 5;
-GUI*      restrict gui;
-Editor*   restrict editor;
-DemiFont* restrict font;
+GUI*       restrict gui;
+Editor*    restrict editor;
+DemiFont*  restrict font;
+RenderData* restrict data;
 
 #ifdef demiwindows
 static HANDLE run_prepare;
@@ -47,6 +48,23 @@ void* prepare(void* arg) {
 void multithreading_init();
 void multithreading_destruct();
 
+void render_text_wrapper(DemiFile* file, float text_x, float text_y) {
+    uint64_t from       = editor->selected[0];
+    uint64_t to         = editor->selected[1];
+    uint64_t select_len = to - from;
+    int32_t  save_color[select_len];
+    if (select_len) {
+        memcpy(save_color, file->string.color_map + from, select_len * sizeof(int32_t));
+        for (uint64_t i = from; i < to; i++)
+            file->string.color_map[i] = 4;
+    }
+
+    render_text(file->string.buffer, file->string.color_map, file->string.length, text_x, text_y, 0);
+
+    if (select_len != 0)
+        memcpy(file->string.color_map + from, save_color, select_len * sizeof(int32_t));
+}
+
 #if defined(demidebug) || defined(demilinux)
 int32_t main() {
 #else
@@ -62,9 +80,11 @@ int32_t CALLBACK WinMain(
     Editor     editor_original   = {0};
     DemiFont   font_original     = {0};
     KeywordMap keyword_map       = {0};
+    RenderData data_original     = {0};
     gui =    &gui_original;
     editor = &editor_original;
     font   = &font_original;
+    data   = &data_original;
     Platform platform = {0};
 
     platform_init(&platform, u"DemiEditor");
@@ -76,7 +96,6 @@ int32_t CALLBACK WinMain(
     render_init(editor->width, editor->height, &editor->files[editor->current_file]);
     multithreading_init();
 
-    RenderData* data = &editor->data;
     Character*  num  = &font->character[u'9'];
     float text_x;
     float text_y;
@@ -87,7 +106,7 @@ int32_t CALLBACK WinMain(
     DemiFile* current;
     wchar_t cursor[1]    = u"|";
     int32_t cursor_color_map[1] = {1};
-    
+
     platform_show_window(&platform);
     while (FLAGS_RUNNING & editor->flags) {
         while (editor->flags & FLAGS_MINIMIZED) {
@@ -140,18 +159,19 @@ int32_t CALLBACK WinMain(
 
             render_text_bind(0);
             render_text(data->lines, data->color_map, data->lines_len, text_x, text_y, 0);
-            render_text(current->string.buffer, current->string.color_map, current->string.length, buffer_text_x, text_y, 0);
+            render_text_wrapper(current, buffer_text_x, text_y);
             render_text(cursor, cursor_color_map, 1, cursor_text_x, cursor_text_y, 0);
         }
 
-        platform_msg();
         platform_swap_buffers(&platform);
+        platform_msg();
     }
     platform_hide_window(&platform);
 
     for (uint8_t i = 0; i < editor->files_opened; i++) {
         file_close(i);
     }
+
     multithreading_destruct();
     font_destruct();
     editor_destruct();

@@ -4,6 +4,10 @@ void buffer_init(StringBuffer* restrict string) {
     string->allocated_memory = 500;
     string->buffer           = realloc(string->buffer, sizeof(char16_t) * string->allocated_memory);
     string->color_map        = realloc(string->color_map, sizeof(int32_t) * string->allocated_memory);
+    string->undo_len         = 0;
+    string->undo_alloc       = 0;
+    string->redo_len         = 0;
+    string->redo_alloc       = 0;
     if (!string->buffer || !string->color_map)
         fatal_error(u"memory allocation failed\nstring.c");
 }
@@ -13,6 +17,10 @@ void buffer_init_str(StringBuffer* restrict string, uint64_t len, char16_t* str)
     string->allocated_memory = len + 1;
     string->buffer           = realloc(string->buffer, sizeof(char16_t) * string->allocated_memory);
     string->color_map        = realloc(string->color_map, sizeof(int32_t) * string->allocated_memory);
+    string->undo_len         = 0;
+    string->undo_alloc       = 0;
+    string->redo_len         = 0;
+    string->redo_alloc       = 0;
     if (!string->buffer || !string->color_map) {
         fatal_error(u"memory allocation failed\nstring.c");
         return;
@@ -68,12 +76,32 @@ void buffer_rem_char(StringBuffer* restrict string, _Bool undo) {
     memmove(string->color_map + string->position - 1, string->color_map + string->position, (string->length - string->position) * sizeof(int32_t));
     string->length--;
     string->position--;
-    string->buffer[string->length] = '\0';
+    string->buffer[string->length] = u'\0';
 
     string->last_change[0] = string->position > 0 ? string->position - 1 : 0;
     string->last_change[1] = string->last_change[0];
     color_map_update(string);
 } 
+
+void buffer_rem_len(StringBuffer* restrict string, uint64_t len, _Bool undo) {
+    if (string->position > string->length || string->position == 0)
+        return;
+    string->last_change[1] = string->position;
+    if (!undo) {
+        char16_t preserve[len + 1];
+        memcpy(preserve, string->buffer + string->position - len, len);
+        preserve[len] = u'\0';
+        undo_push(string, 1, string->position, len, 0, preserve);
+    }
+    memmove(string->buffer + string->position - len, string->buffer + string->position, (string->length - string->position) * sizeof(char16_t));
+    memmove(string->color_map + string->position - len, string->color_map + string->position, (string->length - string->position) * sizeof(int32_t));
+    string->length -= len;
+    string->position -= len;
+    string->buffer[string->length] = u'\0';
+
+    string->last_change[0] = string->position;
+    color_map_update(string);
+}
 
 void buffer_add_string(StringBuffer* restrict string, uint64_t len, char16_t* str, _Bool undo) {
     if (!str || !*str)
@@ -89,8 +117,10 @@ void buffer_add_string(StringBuffer* restrict string, uint64_t len, char16_t* st
             fatal_error(u"failed to initialized content");
             return;
         }
-        memmove(string->buffer + string->position + len, string->buffer + string->position, (string->length - string->position - len) * sizeof(char16_t));
-        memmove(string->color_map + string->position + len, string->color_map + string->position, (string->length - string->position - len) * sizeof(int32_t));
+        if (string->position != string->length) {
+            memmove(string->buffer + string->position + len, string->buffer + string->position, (string->length - string->position - len) * sizeof(char16_t));
+            memmove(string->color_map + string->position + len, string->color_map + string->position, (string->length - string->position - len) * sizeof(int32_t));
+        }
         memcpy(string->buffer + string->position, str, len * sizeof(char16_t));
         string->buffer[string->length] = '\0';
         string->last_change[0] = string->position;
@@ -120,6 +150,9 @@ void undo_push(StringBuffer* restrict string, _Bool rem_char, uint64_t pos, uint
     if (string->undo_len == string->undo_alloc) {
         string->undo_alloc += 20;
         string->undo = realloc(string->undo, string->undo_alloc * sizeof(StringHistory));
+
+        for (uint64_t i = string->undo_alloc - 20; i < string->undo_alloc; i++)
+            string->undo[i].str = NULL;
     }
     StringHistory* current = &string->undo[string->undo_len++];
     current->rem_ch = rem_char;
@@ -127,9 +160,9 @@ void undo_push(StringBuffer* restrict string, _Bool rem_char, uint64_t pos, uint
     current->pos    = pos;
     current->ch     = ch;
     if (str) {
-        uint64_t len = sizeof(char16_t) * u_strlen(str);
-        current->str = realloc(current->str, len + sizeof(char16_t));
-        memcpy(current->str, str, len);
+        uint64_t mem = change_len * sizeof(char16_t);
+        current->str = realloc(current->str, mem);
+        memcpy(current->str, str, mem);
     }
 }
 
@@ -141,8 +174,7 @@ void undo_pop(StringBuffer* restrict string) {
     if (current->rem_ch && current->ch)
         buffer_add_char(string, current->ch, 1);
     else
-        for (uint64_t i = 0; i < current->len; i++)
-            buffer_rem_char(string, 1);
+        buffer_rem_len(string, current->len, 1);
     redo_push(string, !current->rem_ch, current->pos, current->len, current->ch, current->str);
 }
 
@@ -150,6 +182,9 @@ void redo_push(StringBuffer* restrict string, _Bool rem_char, uint64_t pos, uint
     if (string->redo_len == string->redo_alloc) {
         string->redo_alloc += 20;
         string->redo = realloc(string->redo, string->redo_alloc * sizeof(StringHistory));
+
+        for (uint64_t i = string->redo_alloc - 20; i < string->redo_alloc; i++)
+            string->redo[i].str = NULL;
     }
     StringHistory* current = &string->redo[string->redo_len++];
     current->rem_ch = rem_char;
@@ -157,9 +192,9 @@ void redo_push(StringBuffer* restrict string, _Bool rem_char, uint64_t pos, uint
     current->pos    = pos;
     current->ch     = ch;
     if (str) {
-        uint64_t len = sizeof(char16_t) * u_strlen(str);
-        current->str = realloc(current->str, len + sizeof(char16_t));
-        memcpy(current->str, str, len);
+        uint64_t mem = change_len * sizeof(char16_t);
+        current->str = realloc(current->str, mem);
+        memcpy(current->str, str, mem);
     }
 }
 
@@ -172,8 +207,7 @@ void redo_pop(StringBuffer* restrict string) {
     else if (current->rem_ch) 
         buffer_add_string(string, u_strlen(current->str), current->str, 0);
     else 
-        for (uint64_t i = 0; i < current->len; i++)
-            buffer_rem_char(string, 1);
+        buffer_rem_len(string, current->len, 0);
 }
 
 uint64_t u_strlen(const char16_t* restrict str) {

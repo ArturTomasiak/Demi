@@ -166,16 +166,19 @@ typedef struct {
 typedef struct {
     float      dpi_scale;
     float      scroll_speed;
-    uint16_t    flags;
     uint8_t    files_opened;
     uint8_t    current_file;
+    uint16_t   flags;
     uint32_t   dpi;
     int32_t    uniform_limit;
+    uint64_t   selected[2];
     DemiFile*  files;
-    RenderData data;
 
     int32_t width;
     int32_t height; 
+
+    char16_t*  tab;
+    uint8_t    tab_len;
 } Editor;
 
 typedef struct {
@@ -187,8 +190,8 @@ typedef struct {
 
 typedef struct {
     uint8_t texture_count;
-    uint16_t range[9][2];
-    uint32_t texture[9];
+    uint16_t range[5][2];
+    uint32_t texture[2];
     Character* character;
 
     float line_spacing;
@@ -244,6 +247,7 @@ extern const float gray[3];
 extern uint8_t text_start_x;
 extern const uint8_t gui_margin_y;
 
-extern GUI*      restrict gui;
-extern Editor*   restrict editor;
-extern DemiFont* restrict font;
+extern GUI*        restrict gui;
+extern Editor*     restrict editor;
+extern DemiFont*   restrict font;
+extern RenderData* restrict data;

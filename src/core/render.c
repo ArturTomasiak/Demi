@@ -56,7 +56,7 @@ void render_text(char16_t* restrict buffer, int32_t* restrict color_map, uint64_
         y_limit[1] = file->camera_y - font->size;
     }
 
-    int32_t advance   = font->character['a'].advance; // safe with monospaced fonts
+    int32_t advance = font->character['a'].advance; // safe with monospaced fonts
     float translate[16] = {0}, scale_matrix[16] = {0};
     int32_t working_color_map[font->arr_limit];
     float x = start_x;

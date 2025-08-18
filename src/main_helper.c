@@ -6,12 +6,12 @@ extern inline void setup_lines(Editor* restrict editor) {
     uint32_t pos_since_nl = 0;
     uint64_t lines = 1;
     uint64_t alloc = 2;
-    editor->data.current_line = 0;
-    editor->data.since_nl     = 0;
+    data->current_line = 0;
+    data->since_nl     = 0;
     for (uint64_t i = 0; i <= current->length; i++) {
         if (i == current->position) {
-            editor->data.current_line = lines;
-            editor->data.since_nl     = pos_since_nl;
+            data->current_line = lines;
+            data->since_nl     = pos_since_nl;
         }
         pos_since_nl++;
         if (current->buffer[i] == u'\n') {
@@ -20,7 +20,6 @@ extern inline void setup_lines(Editor* restrict editor) {
             pos_since_nl = 0;
         }
     }
-    RenderData* data = &editor->data;
     data->lines     = realloc(data->lines, (alloc + 1) * sizeof(char16_t));
     data->color_map = realloc(data->color_map, alloc * sizeof(int32_t));
     for (uint64_t i = 0; i < alloc; i++)

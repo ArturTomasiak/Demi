@@ -1,11 +1,18 @@
 #include "editor.h"
 
+static inline void unselect() {
+    editor->selected[0] = 0;
+    editor->selected[1] = 0;
+}
+
 void editor_init() {
     editor->flags |= FLAGS_RUNNING;
     glGetIntegerv(GL_MAX_VERTEX_UNIFORM_COMPONENTS, &editor->uniform_limit);
-    editor->dpi_scale = (float)editor->dpi / 96.0f;
+    editor->dpi_scale    = (float)editor->dpi / 96.0f;
     editor->scroll_speed = 1.1;
 
+    unselect();
+    editor_update_tab(4);
     file_create_empty();
 }
 
@@ -32,28 +39,39 @@ void editor_destruct() {
             free(file->path);
     }
     free(editor->files);
+    free(editor->tab);
 }
 
 void editor_backspace() {
     DemiFile* file = &editor->files[editor->current_file];
+    if (editor->selected[0] || editor->selected[1]) {
+        editor_delete_selected(&file->string);
+        unselect();
+        return;
+    }
+    unselect();
     buffer_rem_char(&file->string, 0);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
-void editor_tab() {
-    DemiFile* file = &editor->files[editor->current_file];
-    buffer_add_string(&file->string, 4, u"    ", 0); // TODO add tab len setting
-    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+extern inline void editor_tab() {
+    editor_paste(editor->tab);
 }
 
 void editor_enter() {
     DemiFile* file = &editor->files[editor->current_file];
+    if (editor->selected[0] || editor->selected[1])
+        editor_delete_selected(&file->string);
+    unselect();
     buffer_add_char(&file->string, u'\n', 0);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
 
 void editor_input(char16_t ch) {
     DemiFile* file = &editor->files[editor->current_file];
+    if (editor->selected[0] || editor->selected[1])
+        editor_delete_selected(&file->string);
+    unselect();
     buffer_add_char(&file->string, ch, 0);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
     if (ch == u'/' || ch == u'*')
@@ -62,6 +80,9 @@ void editor_input(char16_t ch) {
 
 void editor_paste(char16_t* str) {
     DemiFile* file = &editor->files[editor->current_file];
+    if (editor->selected[0] || editor->selected[1])
+        editor_delete_selected(&file->string);
+    unselect();
     buffer_add_string(&file->string, u_strlen(str), str, 0);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
 }
@@ -70,12 +91,16 @@ void editor_undo() {
     DemiFile* file = &editor->files[editor->current_file];
     undo_pop(&file->string);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+
+    unselect();
 }
 
 void editor_redo() {
     DemiFile* file = &editor->files[editor->current_file];
     redo_pop(&file->string);
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+
+    unselect();
 }
 
 void editor_jump_top() {
@@ -118,6 +143,7 @@ void editor_mouse_wheel(int32_t delta, _Bool horizontal, void* handle) {
 }
 
 void editor_left_click(float x, float y) {
+    unselect();
     y = editor->height - y;
     if (y > editor->height - gui->size.y) {
         int32_t current_x = 0;
@@ -165,6 +191,8 @@ reach_nl:
         pos--;
     }
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+
+    unselect();
 }
 
 void editor_left() {
@@ -172,6 +200,8 @@ void editor_left() {
     if (string->position > 0)
         string->position--;
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+
+    unselect();
 }
 
 void editor_right() {
@@ -179,6 +209,8 @@ void editor_right() {
     if (string->position < string->length)
         string->position++;
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+
+    unselect();
 }
 
 void editor_down() {
@@ -199,6 +231,42 @@ void editor_down() {
         pos--;
     }   
     editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+
+    unselect();
+}
+
+void editor_select_all() {
+    StringBuffer* string = &editor->files[editor->current_file].string;
+    editor->selected[0] = 0;
+    editor->selected[1] = string->length;
+    string->position = editor->selected[1];
+}
+
+void editor_key_select(_Bool right) {
+    StringBuffer* string = &editor->files[editor->current_file].string;
+    if (editor->selected[0] == 0 && editor->selected[1] == 0) {
+        editor->selected[0] = string->position;
+        editor->selected[1] = string->position;
+    }
+    if (right && editor->selected[1] < string->length)
+        editor->selected[1]++;
+    else if (editor->selected[0] > 0)
+        editor->selected[0]--;
+
+    string->position = editor->selected[1];
+    editor->flags |= FLAGS_ADJUST_CAMERA_TO_CURSOR;
+}
+
+extern inline void editor_delete_selected(StringBuffer* string) {
+    buffer_rem_len(string, editor->selected[1] - editor->selected[0], 0);
+}
+
+void editor_update_tab(uint8_t len) {
+    editor->tab_len = len;
+    editor->tab     = realloc(editor->tab, (len + 1) * sizeof(char16_t));
+    for (uint8_t i = 0; i < len; i++)
+        editor->tab[i] = u' ';
+    editor->tab[len] = u'\0';
 }
 
 void editor_camera_to_cursor(float x, float y, float advance, float nl_height, float min_x) {

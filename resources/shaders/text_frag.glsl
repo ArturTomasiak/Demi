@@ -10,7 +10,7 @@ uniform int letter_map[arr_limit];
 uniform int texture_map[arr_limit];
 uniform int color_map[arr_limit];
 
-uniform vec3 color[4];
+uniform vec3 color[5];
 uniform float gamma;
 uniform float font_size;
 
